@@ -275,7 +275,7 @@ export default function AtlasAI() {
   useEffect(() => {
     if (!userId) return;
     if (profSaveRef.current) clearTimeout(profSaveRef.current);
-    profSaveRef.current = setTimeout(() => { db.saveProfile(supabase, profile, userId); }, 800);
+    profSaveRef.current = setTimeout(() => { db.saveProfile(supabase, profile); }, 800);
     return () => { if (profSaveRef.current) clearTimeout(profSaveRef.current); };
   }, [profile, userId, supabase]);
 
@@ -315,7 +315,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     const tx = review.filter((r) => r._dest === "txn").map((r) => { const { _dest, title, ...x } = r; return { ...x, note: title }; });
     if (its.length) setItems((p) => [...its, ...p]);
     if (tx.length) setTxns((p) => [...tx, ...p]);
-    if (userId) { its.forEach((it) => db.upsertItem(supabase, it, userId)); tx.forEach((x) => db.upsertTxn(supabase, x, userId)); }
+    its.forEach((it) => db.upsertItem(supabase, it)); tx.forEach((x) => db.upsertTxn(supabase, x));
     setRecentId((its[0] || tx[0]).id); setTimeout(() => setRecentId(null), 2000);
     setToast({ kind: "ok", text: `${t.added} · ${review.length}` }); setReview(null);
   }
@@ -355,19 +355,19 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
       } catch {}
     }
     if (!title) title = lang === "es" ? "Recordatorio" : "Reminder";
-    const id = uid(); const remIt = { id, type: "reminder", area, title, detail, photo, done: false }; setItems((p) => [remIt, ...p]); if (userId) db.upsertItem(supabase, remIt, userId); setRecentId(id); setTimeout(() => setRecentId(null), 2000);
+    const id = uid(); const remIt = { id, type: "reminder", area, title, detail, photo, done: false }; setItems((p) => [remIt, ...p]); db.upsertItem(supabase, remIt); setRecentId(id); setTimeout(() => setRecentId(null), 2000);
     setPhoto(null); setPhotoType(null); setNote(""); setRemOpen(false); setRemBusy(false); setTab("today");
   }
 
   const openEdit = (it) => setItemDraft({ ...it });
-  const saveItem = () => { const { _new, ...x } = itemDraft; setItems((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); if (userId) db.upsertItem(supabase, x, userId); setItemDraft(null); };
-  const deleteItem = () => { const id = itemDraft.id; setItems((p) => p.filter((i) => i.id !== id)); if (userId) db.deleteItem(supabase, id); setItemDraft(null); };
-  const toggleDone = (id) => { setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i))); const cur = items.find((i) => i.id === id); if (cur && userId) db.upsertItem(supabase, { ...cur, done: !cur.done }, userId); };
+  const saveItem = () => { const { _new, ...x } = itemDraft; setItems((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertItem(supabase, x); setItemDraft(null); };
+  const deleteItem = () => { const id = itemDraft.id; setItems((p) => p.filter((i) => i.id !== id)); db.deleteItem(supabase, id); setItemDraft(null); };
+  const toggleDone = (id) => { setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i))); const cur = items.find((i) => i.id === id); if (cur) db.upsertItem(supabase, { ...cur, done: !cur.done }); };
   const newEvent = () => setItemDraft({ id: uid(), type: "event", area: "work", title: "", dateISO: calSel, dateLabel: "", _new: true });
   const openTxn = (tx) => setTxnDraft({ ...tx, amount: String(tx.amount) });
   const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: profile.defaultAccount || "amex", note: "", ded: true, _new: true });
-  const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); if (userId) db.upsertTxn(supabase, x, userId); setTxnDraft(null); };
-  const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); if (userId) db.deleteTxn(supabase, id); setTxnDraft(null); };
+  const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertTxn(supabase, x); setTxnDraft(null); };
+  const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); db.deleteTxn(supabase, id); setTxnDraft(null); };
   function scanReceipt(e) {
     const f = e.target.files && e.target.files[0]; if (!f) return; const type = f.type; e.target.value = "";
     const rd = new FileReader();
@@ -392,7 +392,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     const tx = ni.filter((r) => r._dest === "txn").map((r) => { const { _dest, title, ...x } = r; return { ...x, note: title }; });
     if (its.length) setItems((p) => [...its, ...p]);
     if (tx.length) setTxns((p) => [...tx, ...p]);
-    if (userId) { its.forEach((it) => db.upsertItem(supabase, it, userId)); tx.forEach((x) => db.upsertTxn(supabase, x, userId)); }
+    its.forEach((it) => db.upsertItem(supabase, it)); tx.forEach((x) => db.upsertTxn(supabase, x));
   }
   function normalizeNi(list) {
     return (list || []).map((it) => {

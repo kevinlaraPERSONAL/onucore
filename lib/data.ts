@@ -103,18 +103,28 @@ export async function loadAll(supabase: SupabaseClient, userId: string) {
   };
 }
 
-export function upsertItem(supabase: SupabaseClient, it: Any, userId: string) {
-  return supabase.from("items").upsert(itemToRow(it, userId));
+async function currentUserId(supabase: SupabaseClient): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user?.id ?? null;
+}
+export async function upsertItem(supabase: SupabaseClient, it: Any) {
+  const uid = await currentUserId(supabase);
+  if (!uid) return;
+  return supabase.from("items").upsert(itemToRow(it, uid));
 }
 export function deleteItem(supabase: SupabaseClient, id: string) {
   return supabase.from("items").delete().eq("id", id);
 }
-export function upsertTxn(supabase: SupabaseClient, tx: Any, userId: string) {
-  return supabase.from("txns").upsert(txnToRow(tx, userId));
+export async function upsertTxn(supabase: SupabaseClient, tx: Any) {
+  const uid = await currentUserId(supabase);
+  if (!uid) return;
+  return supabase.from("txns").upsert(txnToRow(tx, uid));
 }
 export function deleteTxn(supabase: SupabaseClient, id: string) {
   return supabase.from("txns").delete().eq("id", id);
 }
-export function saveProfile(supabase: SupabaseClient, p: Any, userId: string) {
-  return supabase.from("profiles").update(profileToRow(p)).eq("id", userId);
+export async function saveProfile(supabase: SupabaseClient, p: Any) {
+  const uid = await currentUserId(supabase);
+  if (!uid) return;
+  return supabase.from("profiles").update(profileToRow(p)).eq("id", uid);
 }

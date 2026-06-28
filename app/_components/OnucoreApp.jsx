@@ -1,6 +1,8 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import installMockClaude from "../_lib/mockClaude.js";
+import { createClient } from "@/lib/supabase/client";
+import * as db from "@/lib/data";
 if (typeof window !== "undefined") installMockClaude();
 
 // onucore AI — App consolidada (mobile-first)
@@ -140,7 +142,7 @@ const STR = {
   },
 };
 
-const uid = () => Math.random().toString(36).slice(2, 10);
+const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2, 10));
 const todayISO = () => new Date().toISOString().slice(0, 10);
 const money = (n, loc) => new Intl.NumberFormat(loc || "en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n || 0);
 const num = (v) => (typeof v === "number" ? v : parseFloat(v) || 0);
@@ -202,8 +204,8 @@ function mockCal(source, y, m) {
 }
 
 export default function AtlasAI() {
-  const [items, setItems] = useState(seedItems);
-  const [txns, setTxns] = useState(seedTxns);
+  const [items, setItems] = useState([]);
+  const [txns, setTxns] = useState([]);
   const [tab, setTab] = useState("today");
   const [lang, setLang] = useState("en");
   const [langOpen, setLangOpen] = useState(false);
@@ -250,6 +252,33 @@ export default function AtlasAI() {
   const [fseg, setFseg] = useState("txns");
   const recogRef = useRef(null); const fileRef = useRef(null); const receiptRef = useRef(null); const waFileRef = useRef(null); const waEndRef = useRef(null); const profileFileRef = useRef(null);
 
+  const supabase = useMemo(() => createClient(), []);
+  const [userId, setUserId] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const user = data && data.user;
+      if (!user || !alive) return;
+      setUserId(user.id);
+      try {
+        const d = await db.loadAll(supabase, user.id);
+        if (!alive) return;
+        setItems(d.items);
+        setTxns(d.txns);
+        if (d.profile) setProfile((p) => ({ ...p, ...d.profile }));
+      } catch { /* noop */ }
+    })();
+    return () => { alive = false; };
+  }, [supabase]);
+  const profSaveRef = useRef(null);
+  useEffect(() => {
+    if (!userId) return;
+    if (profSaveRef.current) clearTimeout(profSaveRef.current);
+    profSaveRef.current = setTimeout(() => { db.saveProfile(supabase, profile, userId); }, 800);
+    return () => { if (profSaveRef.current) clearTimeout(profSaveRef.current); };
+  }, [profile, userId, supabase]);
+
   const L = LANGS.find((l) => l.code === lang) || LANGS[0];
   const t = STR[lang] || STR.en; const loc = L.locale; const now = new Date();
   const byArea = (arr) => (areaFilter === "all" ? arr : arr.filter((i) => i.area === areaFilter));
@@ -286,6 +315,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     const tx = review.filter((r) => r._dest === "txn").map((r) => { const { _dest, title, ...x } = r; return { ...x, note: title }; });
     if (its.length) setItems((p) => [...its, ...p]);
     if (tx.length) setTxns((p) => [...tx, ...p]);
+    if (userId) { its.forEach((it) => db.upsertItem(supabase, it, userId)); tx.forEach((x) => db.upsertTxn(supabase, x, userId)); }
     setRecentId((its[0] || tx[0]).id); setTimeout(() => setRecentId(null), 2000);
     setToast({ kind: "ok", text: `${t.added} · ${review.length}` }); setReview(null);
   }
@@ -325,19 +355,19 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
       } catch {}
     }
     if (!title) title = lang === "es" ? "Recordatorio" : "Reminder";
-    const id = uid(); setItems((p) => [{ id, type: "reminder", area, title, detail, photo, done: false }, ...p]); setRecentId(id); setTimeout(() => setRecentId(null), 2000);
+    const id = uid(); const remIt = { id, type: "reminder", area, title, detail, photo, done: false }; setItems((p) => [remIt, ...p]); if (userId) db.upsertItem(supabase, remIt, userId); setRecentId(id); setTimeout(() => setRecentId(null), 2000);
     setPhoto(null); setPhotoType(null); setNote(""); setRemOpen(false); setRemBusy(false); setTab("today");
   }
 
   const openEdit = (it) => setItemDraft({ ...it });
-  const saveItem = () => { setItems((p) => { const ex = p.some((i) => i.id === itemDraft.id); const { _new, ...x } = itemDraft; return ex ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p]; }); setItemDraft(null); };
-  const deleteItem = () => { setItems((p) => p.filter((i) => i.id !== itemDraft.id)); setItemDraft(null); };
-  const toggleDone = (id) => setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+  const saveItem = () => { const { _new, ...x } = itemDraft; setItems((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); if (userId) db.upsertItem(supabase, x, userId); setItemDraft(null); };
+  const deleteItem = () => { const id = itemDraft.id; setItems((p) => p.filter((i) => i.id !== id)); if (userId) db.deleteItem(supabase, id); setItemDraft(null); };
+  const toggleDone = (id) => { setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i))); const cur = items.find((i) => i.id === id); if (cur && userId) db.upsertItem(supabase, { ...cur, done: !cur.done }, userId); };
   const newEvent = () => setItemDraft({ id: uid(), type: "event", area: "work", title: "", dateISO: calSel, dateLabel: "", _new: true });
   const openTxn = (tx) => setTxnDraft({ ...tx, amount: String(tx.amount) });
   const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: profile.defaultAccount || "amex", note: "", ded: true, _new: true });
-  const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; setTxns((p) => { const ex = p.some((x) => x.id === txnDraft.id); const { _new, ...x } = { ...txnDraft, amount: a }; return ex ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p]; }); setTxnDraft(null); };
-  const deleteTxn = () => { setTxns((p) => p.filter((x) => x.id !== txnDraft.id)); setTxnDraft(null); };
+  const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); if (userId) db.upsertTxn(supabase, x, userId); setTxnDraft(null); };
+  const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); if (userId) db.deleteTxn(supabase, id); setTxnDraft(null); };
   function scanReceipt(e) {
     const f = e.target.files && e.target.files[0]; if (!f) return; const type = f.type; e.target.value = "";
     const rd = new FileReader();
@@ -362,6 +392,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     const tx = ni.filter((r) => r._dest === "txn").map((r) => { const { _dest, title, ...x } = r; return { ...x, note: title }; });
     if (its.length) setItems((p) => [...its, ...p]);
     if (tx.length) setTxns((p) => [...tx, ...p]);
+    if (userId) { its.forEach((it) => db.upsertItem(supabase, it, userId)); tx.forEach((x) => db.upsertTxn(supabase, x, userId)); }
   }
   function normalizeNi(list) {
     return (list || []).map((it) => {

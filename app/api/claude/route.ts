@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { createClient as createServerSupabase } from "@/lib/supabase/server";
 
 // Server-side proxy to Claude.
 //
@@ -25,6 +26,15 @@ const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from the environme
 export async function POST(request: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ error: "missing_api_key" }, { status: 500 });
+  }
+
+  // Require a logged-in user: blocks anonymous visitors from spending the API key.
+  const supabase = await createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
   let body: {

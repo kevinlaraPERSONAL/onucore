@@ -28,7 +28,7 @@ const GOALS = [
   { en: "Less stress, forget less", es: "Menos estrés, olvidar menos" },
 ];
 const CONNS = [
-  { k: "gcal", name: "Google Calendar", en: "See and create events alongside your agenda", es: "Ve y crea eventos junto a tu agenda" },
+  { k: "gcal", name: "Google Calendar", en: "See your Google events in your agenda", es: "Ve tus eventos de Google en tu agenda" },
   { k: "apple", name: "Apple Calendar", en: "Sync your iPhone calendar", es: "Sincroniza el calendario de tu iPhone" },
   { k: "gmail", name: "Gmail", en: "Forward invoices & receipts to log them", es: "Reenvía facturas y recibos para registrarlos" },
   { k: "contacts", name: "Contacts", en: "Recognize the people you mention", es: "Reconoce a las personas que mencionas" },
@@ -253,6 +253,9 @@ export default function AtlasAI() {
   const [calM, setCalM] = useState(now0.getMonth());
   const [calSel, setCalSel] = useState(todayISO());
   const [calSrc, setCalSrc] = useState({ google: false, apple: false });
+  // Google Calendar — real connection state + events fetched for the visible month.
+  const [gcal, setGcal] = useState({ connected: false, email: null, loading: true });
+  const [gcalEvents, setGcalEvents] = useState([]);
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
@@ -288,6 +291,46 @@ export default function AtlasAI() {
   const L = LANGS.find((l) => l.code === lang) || LANGS[0];
   const t = STR[lang] || STR.en; const loc = L.locale; const now = new Date();
   const byArea = (arr) => (areaFilter === "all" ? arr : arr.filter((i) => i.area === areaFilter));
+
+  // ── Google Calendar sync ────────────────────────────────────────────────
+  const connectGoogle = () => { if (typeof window !== "undefined") window.location.href = "/api/google/connect"; };
+  const disconnectGoogle = () => {
+    fetch("/api/google/disconnect", { method: "POST" }).then(() => {
+      setGcal({ connected: false, email: null, loading: false });
+      setGcalEvents([]);
+      setCalSrc((c) => ({ ...c, google: false }));
+      setToast({ kind: "ok", text: lang === "es" ? "Google Calendar desconectado" : "Google Calendar disconnected" });
+    });
+  };
+  // On mount: read the OAuth return flag (?gcal=…), clean the URL, check status.
+  useEffect(() => {
+    let flag = null;
+    if (typeof window !== "undefined") {
+      const u = new URL(window.location.href);
+      flag = u.searchParams.get("gcal");
+      if (flag) { u.searchParams.delete("gcal"); window.history.replaceState({}, "", u.pathname + u.search); }
+    }
+    if (flag === "connected") setToast({ kind: "ok", text: lang === "es" ? "Google Calendar conectado ✓" : "Google Calendar connected ✓" });
+    else if (flag === "unconfigured") setToast({ kind: "warn", text: lang === "es" ? "Google aún no está configurado (faltan las claves)" : "Google isn't set up yet (missing keys)" });
+    else if (flag === "error") setToast({ kind: "warn", text: lang === "es" ? "No se pudo conectar con Google" : "Couldn't connect to Google" });
+    else if (flag === "login") setToast({ kind: "warn", text: lang === "es" ? "Inicia sesión primero" : "Sign in first" });
+    fetch("/api/google/status").then((r) => r.json()).then((d) => {
+      setGcal({ connected: !!d.connected, email: d.email || null, loading: false });
+      if (d.connected) setCalSrc((c) => ({ ...c, google: true }));
+    }).catch(() => setGcal({ connected: false, email: null, loading: false }));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // When connected (or the month changes): load that month's Google events.
+  useEffect(() => {
+    if (!gcal.connected) { setGcalEvents([]); return; }
+    const timeMin = new Date(calY, calM, -1).toISOString();
+    const timeMax = new Date(calY, calM + 1, 3).toISOString();
+    let cancelled = false;
+    fetch(`/api/google/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`)
+      .then((r) => r.json())
+      .then((d) => { if (cancelled) return; if (d && d.connected === false) { setGcal((g) => ({ ...g, connected: false })); setGcalEvents([]); } else setGcalEvents((d && d.events) || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [gcal.connected, calY, calM]);
 
   async function processCapture(raw) {
     const text = (raw ?? "").trim(); if (!text) return;
@@ -649,7 +692,7 @@ ${JSON.stringify(snapshot)}`;
 
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
-          {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit }} />}
+          {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
@@ -792,12 +835,12 @@ ${JSON.stringify(snapshot)}`;
               <div style={{ fontSize: 12.5, color: C.mute, margin: "0 2px 8px", lineHeight: 1.45 }}>{t.conn_sub}</div>
               <div style={cardS}>
                 {CONNS.map((cn, i) => {
-                  const on = cn.k === "gcal" ? calSrc.google : cn.k === "apple" ? calSrc.apple : cn.k === "whatsapp" ? true : profile.conns[cn.k];
+                  const on = cn.k === "gcal" ? gcal.connected : cn.k === "apple" ? calSrc.apple : cn.k === "whatsapp" ? true : profile.conns[cn.k];
                   const builtin = cn.k === "whatsapp";
-                  const toggle = () => { if (builtin) return; if (cn.k === "gcal") setCalSrc((c) => ({ ...c, google: !c.google })); else if (cn.k === "apple") setCalSrc((c) => ({ ...c, apple: !c.apple })); else setProfile((p) => ({ ...p, conns: { ...p.conns, [cn.k]: !p.conns[cn.k] } })); };
+                  const toggle = () => { if (builtin) return; if (cn.k === "gcal") { if (gcal.connected) disconnectGoogle(); else connectGoogle(); } else if (cn.k === "apple") setCalSrc((c) => ({ ...c, apple: !c.apple })); else setProfile((p) => ({ ...p, conns: { ...p.conns, [cn.k]: !p.conns[cn.k] } })); };
                   return (<div key={cn.k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: i < CONNS.length - 1 ? `1px solid ${C.borderSoft}` : "none" }}>
                     <span style={{ width: 36, height: 36, borderRadius: 9, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: on ? C.gold : C.mute, flexShrink: 0 }}><LinkIcon /></span>
-                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5 }}>{cn.name}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>{cn[lang === "es" ? "es" : "en"]}</div></div>
+                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5 }}>{cn.name}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cn.k === "gcal" && gcal.connected && gcal.email ? gcal.email : cn[lang === "es" ? "es" : "en"]}</div></div>
                     <button onClick={toggle} disabled={builtin} style={{ flexShrink: 0, borderRadius: 999, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: builtin ? "default" : "pointer", fontFamily: SF, border: `1px solid ${on ? C.goldSoft : C.border}`, background: on ? "rgba(229,72,77,.12)" : "transparent", color: on ? C.gold : C.dim }}>{builtin ? t.built_in : on ? t.connected : t.connect}</button>
                   </div>);
                 })}
@@ -1008,18 +1051,19 @@ function Today({ t, lang, loc, briefing, briefingLoading, regenerate, events, ta
     </>}
   </>);
 }
-function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit }) {
+function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit, gcal, gcalEvents, connectGoogle }) {
   const SRC = { atlas: C.gold, google: C.google, apple: C.apple };
   const monthLabel = new Date(calY, calM, 1).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "long", year: "numeric" });
   const firstOffset = (new Date(calY, calM, 1).getDay() + 6) % 7;
   const dim = new Date(calY, calM + 1, 0).getDate();
-  const dayEvents = (iso) => { let a = items.filter((i) => i.type === "event" && i.dateISO === iso).map((e) => ({ ...e, source: "atlas", time: e.dateLabel })); if (calSrc.google) a = a.concat(mockCal("google", calY, calM).filter((e) => e.dateISO === iso)); if (calSrc.apple) a = a.concat(mockCal("apple", calY, calM).filter((e) => e.dateISO === iso)); return a.sort((x, y) => parseT(x.time) - parseT(y.time)); };
+  const dayEvents = (iso) => { let a = items.filter((i) => i.type === "event" && i.dateISO === iso).map((e) => ({ ...e, source: "atlas", time: e.dateLabel })); if (calSrc.google) a = a.concat((gcalEvents || []).filter((e) => e.dateISO === iso)); if (calSrc.apple) a = a.concat(mockCal("apple", calY, calM).filter((e) => e.dateISO === iso)); return a.sort((x, y) => parseT(x.time) - parseT(y.time)); };
   const shift = (delta) => { let nm = calM + delta, ny = calY; if (nm < 0) { nm = 11; ny--; } if (nm > 11) { nm = 0; ny++; } setCalY(ny); setCalM(nm); setCalSel(toISO(ny, nm, 1)); };
   const sel = dayEvents(calSel); const selDate = new Date(calSel + "T00:00:00"); const WD = lang === "es" ? ["L", "M", "X", "J", "V", "S", "D"] : ["M", "T", "W", "T", "F", "S", "S"];
   return (<>
     <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
       <SrcChip label="onucore" color={SRC.atlas} on count />
-      {["google", "apple"].map((s) => <SrcChip key={s} label={s === "google" ? "Google" : "Apple"} color={SRC[s]} on={calSrc[s]} connectLabel={t.cal_connect} onClick={() => setCalSrc((c) => ({ ...c, [s]: !c[s] }))} />)}
+      <SrcChip label="Google" color={SRC.google} on={gcal.connected && calSrc.google} connectLabel={gcal.connected ? undefined : t.cal_connect} onClick={() => (gcal.connected ? setCalSrc((c) => ({ ...c, google: !c.google })) : connectGoogle())} />
+      <SrcChip label="Apple" color={SRC.apple} on={calSrc.apple} connectLabel={t.cal_connect} onClick={() => setCalSrc((c) => ({ ...c, apple: !c.apple }))} />
     </div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "16px 0 8px" }}>
       <button onClick={() => shift(-1)} style={navBtn}>‹</button>

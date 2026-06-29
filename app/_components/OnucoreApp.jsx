@@ -208,6 +208,7 @@ export default function AtlasAI() {
   const [chatMsgs, setChatMsgs] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "en"; });
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
@@ -332,6 +333,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   useEffect(() => { generateBriefing(items); /* eslint-disable-next-line */ }, [lang]);
   useEffect(() => { waEndRef.current && waEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [waMsgs, waTyping]);
   useEffect(() => { chatEndRef.current && chatEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatLoading]);
+  useEffect(() => { if (typeof window !== "undefined" && window.sessionStorage.getItem("onucore_onboard") === "1") setShowOnboarding(true); }, []);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { setVoiceAvailable(false); return; }
@@ -569,6 +571,14 @@ ${JSON.stringify(snapshot)}`;
   const addHobby = () => { const v = hobbyInput.trim(); if (!v) return; setProfile((p) => ({ ...p, hobbies: [...p.hobbies, v] })); setHobbyInput(""); };
   const addPerson = () => { const v = pName.trim(); if (!v) return; setProfile((p) => ({ ...p, people: [...p.people, { name: v, rel: pRel.trim() }] })); setPName(""); setPRel(""); };
   const toggleGoal = (g) => setProfile((p) => ({ ...p, goals: p.goals.includes(g) ? p.goals.filter((x) => x !== g) : [...p.goals, g] }));
+  const obIn = { width: "100%", background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 12, outline: "none", color: C.text, fontSize: 15.5, padding: "12px 14px", fontFamily: SF, marginTop: 8 };
+  const obLbl = { display: "block", fontSize: 13, color: C.dim, fontWeight: 500, marginTop: 18 };
+  function finishOnboarding() {
+    setShowOnboarding(false);
+    if (typeof window !== "undefined") window.sessionStorage.removeItem("onucore_onboard");
+    db.saveProfile(supabase, profile);
+    setTab("today");
+  }
   const exportData = () => { try { const blob = new Blob([JSON.stringify({ profile, items, txns }, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "atlas-data.json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
 
   // derived
@@ -794,6 +804,41 @@ ${JSON.stringify(snapshot)}`;
 
               <button onClick={() => { setProfileOpen(false); generateBriefing(items); }} style={{ ...btnGold, width: "100%", marginTop: 18 }}>{t.save}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showOnboarding && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 130, background: C.bg, display: "flex", justifyContent: "center", overflowY: "auto" }}>
+          <div style={{ width: "100%", maxWidth: 440, padding: "calc(env(safe-area-inset-top) + 30px) 22px 36px", display: "flex", flexDirection: "column" }}>
+            <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "0.08em" }}>onucore<span style={{ color: C.red, fontSize: 11, verticalAlign: "super", marginLeft: 2, fontWeight: 700 }}>AI</span></div>
+            <div style={{ fontSize: 21, fontWeight: 600, marginTop: 20, lineHeight: 1.3 }}>{lang === "es" ? "Personalicemos onucore" : "Let's set up onucore"}</div>
+            <div style={{ fontSize: 13.5, color: C.dim, marginTop: 8, lineHeight: 1.5 }}>{lang === "es" ? "Cuéntame un poco de ti para que sea TU asistente, no uno genérico. Puedes cambiar todo después en tu perfil." : "Tell me a bit about you so it's YOUR assistant, not a generic one. You can change all of this later in your profile."}</div>
+
+            <label style={obLbl}>{lang === "es" ? "¿Cómo te llamas?" : "What's your name?"}</label>
+            <input className="ph" style={obIn} value={profile.name} onChange={(e) => setProfile((p) => ({ ...p, name: e.target.value }))} placeholder={lang === "es" ? "Tu nombre" : "Your name"} />
+
+            <label style={obLbl}>{lang === "es" ? "¿Cómo prefieres que te diga?" : "What should I call you?"} <span style={{ fontSize: 11, color: C.mute, fontWeight: 400 }}>· {lang === "es" ? "opcional" : "optional"}</span></label>
+            <input className="ph" style={obIn} value={profile.nickname} onChange={(e) => setProfile((p) => ({ ...p, nickname: e.target.value }))} placeholder={lang === "es" ? "Apodo" : "Nickname"} />
+
+            <label style={obLbl}>{lang === "es" ? "¿A qué te dedicas?" : "What do you do for work?"}</label>
+            <input className="ph" style={obIn} value={profile.role} onChange={(e) => setProfile((p) => ({ ...p, role: e.target.value }))} placeholder={lang === "es" ? "Ej: diseñador freelance, consultora…" : "e.g. freelance designer, consultant…"} />
+
+            <label style={obLbl}>{lang === "es" ? "¿Cómo quieres que te hable?" : "How should I talk to you?"}</label>
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              {[["casual", lang === "es" ? "Cercano (tú)" : "Casual"], ["formal", lang === "es" ? "Formal (usted)" : "Formal"]].map(([k, lbl]) => (
+                <button key={k} type="button" onClick={() => setProfile((p) => ({ ...p, tone: k }))} style={{ flex: 1, padding: "12px 0", borderRadius: 12, cursor: "pointer", fontFamily: SF, fontSize: 14, fontWeight: profile.tone === k ? 600 : 400, background: profile.tone === k ? C.red : "transparent", color: profile.tone === k ? "#ffffff" : C.dim, border: `1px solid ${profile.tone === k ? C.red : C.border}` }}>{lbl}</button>
+              ))}
+            </div>
+
+            <label style={obLbl}>{lang === "es" ? "¿Tu meta principal ahora?" : "Your main goal right now?"} <span style={{ fontSize: 11, color: C.mute, fontWeight: 400 }}>· {lang === "es" ? "opcional" : "optional"}</span></label>
+            <input className="ph" style={obIn} value={(profile.goals && profile.goals[0]) || ""} onChange={(e) => setProfile((p) => ({ ...p, goals: e.target.value ? [e.target.value] : [] }))} placeholder={lang === "es" ? "Ej: conseguir 3 clientes nuevos" : "e.g. land 3 new clients"} />
+
+            <label style={obLbl}>{lang === "es" ? "¿En qué ciudad estás?" : "What city are you in?"} <span style={{ fontSize: 11, color: C.mute, fontWeight: 400 }}>· {lang === "es" ? "opcional" : "optional"}</span></label>
+            <input className="ph" style={obIn} value={profile.city} onChange={(e) => setProfile((p) => ({ ...p, city: e.target.value }))} placeholder={lang === "es" ? "Ej: Ciudad de México" : "e.g. Mexico City"} />
+
+            <button type="button" onClick={finishOnboarding} disabled={!profile.name.trim()} style={{ width: "100%", height: 50, marginTop: 26, borderRadius: 12, border: "none", background: C.red, color: "#ffffff", fontSize: 15.5, fontWeight: 600, cursor: profile.name.trim() ? "pointer" : "default", opacity: profile.name.trim() ? 1 : 0.45, fontFamily: SF }}>{lang === "es" ? "Empezar a usar onucore" : "Start using onucore"}</button>
+            <button type="button" onClick={finishOnboarding} style={{ background: "none", border: "none", color: C.mute, fontSize: 13, cursor: "pointer", fontFamily: SF, marginTop: 14, alignSelf: "center" }}>{lang === "es" ? "Saltar por ahora" : "Skip for now"}</button>
           </div>
         </div>
       )}

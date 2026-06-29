@@ -82,8 +82,13 @@ export default function AuthScreen() {
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({ email: email.trim(), password: pw });
         if (error) throw error;
-        if (!data.session) setMsg({ kind: "ok", text: tr.created });
-        // If confirmation is disabled, a session is returned and the app swaps in automatically.
+        if (data.session) {
+          // Fresh account with an instant session: tell the app to run onboarding.
+          if (typeof window !== "undefined") window.sessionStorage.setItem("onucore_onboard", "1");
+          // The app swaps in automatically via the session listener.
+        } else {
+          setMsg({ kind: "ok", text: tr.created });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: pw });
         if (error) throw error;

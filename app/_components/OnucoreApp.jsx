@@ -690,7 +690,7 @@ ${JSON.stringify(snapshot)}`;
 
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
-          {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle }} />}
+          {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
@@ -1050,32 +1050,79 @@ function Today({ t, lang, loc, briefing, briefingLoading, regenerate, events, ta
     </>}
   </>);
 }
-function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit, gcal, gcalEvents, connectGoogle }) {
-  const SRC = { atlas: C.gold, google: C.google, apple: C.apple };
+function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit, gcal, gcalEvents, connectGoogle, desktop }) {
+  const SRC = { atlas: C.red, google: "#6b93d6", apple: C.apple };
+  const SLABEL = { atlas: "onucore", google: "Google", apple: "Apple" };
+  const allDay = lang === "es" ? "Todo el día" : "All day";
   const monthLabel = new Date(calY, calM, 1).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "long", year: "numeric" });
   const firstOffset = (new Date(calY, calM, 1).getDay() + 6) % 7;
   const dim = new Date(calY, calM + 1, 0).getDate();
   const dayEvents = (iso) => { let a = items.filter((i) => i.type === "event" && i.dateISO === iso).map((e) => ({ ...e, source: "atlas", time: e.dateLabel })); if (calSrc.google) a = a.concat((gcalEvents || []).filter((e) => e.dateISO === iso)); return a.sort((x, y) => parseT(x.time) - parseT(y.time)); };
   const shift = (delta) => { let nm = calM + delta, ny = calY; if (nm < 0) { nm = 11; ny--; } if (nm > 11) { nm = 0; ny++; } setCalY(ny); setCalM(nm); setCalSel(toISO(ny, nm, 1)); };
   const sel = dayEvents(calSel); const selDate = new Date(calSel + "T00:00:00"); const WD = lang === "es" ? ["L", "M", "X", "J", "V", "S", "D"] : ["M", "T", "W", "T", "F", "S", "S"];
+  // Every event in the visible month → for the "more this month" agenda list and the month count.
+  const monthEvents = []; for (let d = 1; d <= dim; d++) { const iso = toISO(calY, calM, d); dayEvents(iso).forEach((e) => monthEvents.push({ ...e, iso })); }
+  const upcoming = monthEvents.filter((e) => e.iso !== calSel);
   return (<>
-    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+    <div style={{ display: "flex", gap: 8, marginTop: 6, alignItems: "center" }}>
       <SrcChip label="onucore" color={SRC.atlas} on count />
       <SrcChip label="Google" color={SRC.google} on={gcal.connected && calSrc.google} connectLabel={gcal.connected ? undefined : t.cal_connect} onClick={() => (gcal.connected ? setCalSrc((c) => ({ ...c, google: !c.google })) : connectGoogle())} />
+      <div style={{ marginLeft: "auto", fontSize: 12, color: C.mute }}>{monthEvents.length} {monthEvents.length === 1 ? (lang === "es" ? "evento" : "event") : (lang === "es" ? "eventos" : "events")}</div>
     </div>
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "16px 0 8px" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "16px 0 10px" }}>
       <button onClick={() => shift(-1)} style={navBtn}>‹</button>
-      <div style={{ fontSize: 19, textTransform: "capitalize" }}>{monthLabel}</div>
+      <div style={{ fontSize: 19, textTransform: "capitalize", fontWeight: 600 }}>{monthLabel}</div>
       <button onClick={() => shift(1)} style={navBtn}>›</button>
     </div>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 4 }}>{WD.map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 10.5, color: C.mute }}>{d}</div>)}</div>
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 3 }}>
-      {Array.from({ length: 42 }).map((_, i) => { const dn = i - firstOffset + 1; const real = dn >= 1 && dn <= dim; const iso = real ? toISO(calY, calM, dn) : null; const isSel = iso === calSel; const isToday = iso === todayISO(); const evs = real ? dayEvents(iso) : []; const srcs = [...new Set(evs.map((e) => e.source))].slice(0, 3);
-        return (<button key={i} disabled={!real} onClick={() => setCalSel(iso)} style={{ aspectRatio: "1/1", border: `1px solid ${isSel ? C.gold : "transparent"}`, borderRadius: 12, background: isSel ? "rgba(229,72,77,.10)" : "transparent", cursor: real ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, fontFamily: SF }}>{real && (<><span style={{ fontSize: 14, fontWeight: isToday ? 700 : 400, color: isToday ? C.gold : isSel ? C.text : C.dim, width: 26, height: 26, lineHeight: "26px", borderRadius: 999, background: isToday ? "rgba(229,72,77,.16)" : "transparent" }}>{dn}</span><span style={{ display: "flex", gap: 3, height: 5 }}>{srcs.map((s) => <span key={s} style={{ width: 5, height: 5, borderRadius: 999, background: SRC[s] }} />)}</span></>)}</button>);
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", marginBottom: 6 }}>{WD.map((d, i) => <div key={i} style={{ textAlign: "center", fontSize: 10.5, color: C.mute, fontWeight: 600, letterSpacing: "0.05em" }}>{d}</div>)}</div>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 4 }}>
+      {Array.from({ length: 42 }).map((_, i) => { const dn = i - firstOffset + 1; const real = dn >= 1 && dn <= dim; const iso = real ? toISO(calY, calM, dn) : null; const isSel = iso === calSel; const isToday = iso === todayISO(); const evs = real ? dayEvents(iso) : []; const has = evs.length > 0;
+        return (<button key={i} disabled={!real} onClick={() => setCalSel(iso)} style={{ minHeight: desktop ? 76 : 50, border: `1px solid ${isSel ? C.red : has ? C.borderSoft : "transparent"}`, borderRadius: 11, background: isSel ? "rgba(229,72,77,.10)" : has ? C.surface : "transparent", cursor: real ? "pointer" : "default", display: "flex", flexDirection: "column", alignItems: desktop ? "stretch" : "center", justifyContent: "flex-start", gap: 3, padding: desktop ? "5px 5px 6px" : "6px 2px", fontFamily: SF, overflow: "hidden" }}>
+          {real && (<>
+            <span style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "#fff" : isSel ? C.text : C.dim, alignSelf: desktop ? "flex-start" : "center", minWidth: 22, height: 22, lineHeight: "22px", textAlign: "center", borderRadius: 999, background: isToday ? C.red : "transparent", flexShrink: 0, padding: isToday ? "0 6px" : 0 }}>{dn}</span>
+            {desktop ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2, width: "100%", marginTop: 1 }}>
+                {evs.slice(0, 2).map((e, k) => (<div key={k} style={{ fontSize: 9.5, lineHeight: "14px", color: C.text, background: `${SRC[e.source] || C.mute}26`, borderLeft: `2px solid ${SRC[e.source] || C.mute}`, borderRadius: "0 3px 3px 0", padding: "1px 5px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</div>))}
+                {evs.length > 2 && <div style={{ fontSize: 9, color: C.mute, paddingLeft: 3 }}>+{evs.length - 2} {lang === "es" ? "más" : "more"}</div>}
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 2.5, alignItems: "center", marginTop: 1 }}>
+                {evs.slice(0, 3).map((e, k) => (<span key={k} style={{ width: 15, height: 3, borderRadius: 2, background: SRC[e.source] || C.mute }} />))}
+              </div>
+            )}
+          </>)}
+        </button>);
       })}
     </div>
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "18px 0 8px" }}><div style={{ fontSize: 13, color: C.dim, textTransform: "capitalize" }}>{selDate.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { weekday: "long", day: "numeric", month: "long" })}</div><button onClick={newEvent} style={{ display: "flex", alignItems: "center", gap: 6, background: C.gold, color: "#ffffff", border: "none", borderRadius: 999, padding: "7px 14px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>＋ {t.ev_new}</button></div>
-    {sel.length === 0 ? <Empty>—</Empty> : sel.map((e) => (<div key={e.id} className="rise" onClick={() => e.source === "atlas" && onEdit(items.find((i) => i.id === e.id))} style={{ display: "flex", gap: 14, alignItems: "flex-start", padding: "13px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 9, cursor: e.source === "atlas" ? "pointer" : "default" }}><div style={{ width: 3, alignSelf: "stretch", borderRadius: 4, background: SRC[e.source], minHeight: 32 }} /><div style={{ flex: 1 }}><div style={{ fontSize: 15 }}>{e.title}</div><div style={{ fontSize: 12, color: C.mute, marginTop: 3 }}>{e.time}{e.person ? ` · ${e.person}` : ""}</div></div><div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: SRC[e.source], paddingTop: 3 }}>{e.source}</div></div>))}
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "22px 0 10px" }}>
+      <div style={{ fontSize: 14.5, fontWeight: 600, textTransform: "capitalize" }}>{selDate.toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { weekday: "long", day: "numeric", month: "long" })}</div>
+      <button onClick={newEvent} style={{ display: "flex", alignItems: "center", gap: 6, background: C.red, color: "#ffffff", border: "none", borderRadius: 999, padding: "8px 15px", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>＋ {t.ev_new}</button>
+    </div>
+    {sel.length === 0
+      ? <div style={{ padding: "22px 14px", background: C.surface, border: `1px dashed ${C.border}`, borderRadius: 14, textAlign: "center", color: C.mute, fontSize: 13.5 }}>{lang === "es" ? "Sin eventos este día" : "No events this day"}</div>
+      : sel.map((e) => (<div key={e.id} className="rise" onClick={() => e.source === "atlas" && onEdit(items.find((i) => i.id === e.id))} style={{ display: "flex", gap: 12, alignItems: "stretch", padding: "13px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 9, cursor: e.source === "atlas" ? "pointer" : "default" }}>
+          <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: SRC[e.source] || C.mute, minHeight: 38 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 15, fontWeight: 500 }}>{e.title}</div>
+            <div style={{ fontSize: 12.5, color: C.dim, marginTop: 3 }}>{e.time || allDay}{e.person ? ` · ${e.person}` : ""}</div>
+          </div>
+          <span style={{ alignSelf: "center", fontSize: 9.5, letterSpacing: "0.06em", textTransform: "uppercase", color: SRC[e.source] || C.mute, background: `${SRC[e.source] || C.mute}1e`, border: `1px solid ${SRC[e.source] || C.mute}55`, borderRadius: 999, padding: "3px 9px", flexShrink: 0 }}>{SLABEL[e.source] || e.source}</span>
+        </div>))}
+    {upcoming.length > 0 && (<>
+      <div style={{ fontSize: 10.5, letterSpacing: "0.18em", color: C.mute, textTransform: "uppercase", margin: "24px 2px 10px" }}>{lang === "es" ? "Más este mes" : "More this month"}</div>
+      {upcoming.map((e) => (<div key={e.id + e.iso} className="rise" onClick={() => setCalSel(e.iso)} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 8, cursor: "pointer" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 30, flexShrink: 0 }}>
+            <span style={{ fontSize: 9, color: C.mute, textTransform: "uppercase", letterSpacing: "0.04em" }}>{new Date(e.iso + "T00:00:00").toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { weekday: "short" }).replace(".", "")}</span>
+            <span style={{ fontSize: 17, fontWeight: 600, color: C.text }}>{parseInt(e.iso.slice(8), 10)}</span>
+          </div>
+          <div style={{ width: 3, alignSelf: "stretch", borderRadius: 4, background: SRC[e.source] || C.mute, minHeight: 26 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</div>
+            <div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>{e.time || allDay}</div>
+          </div>
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: SRC[e.source] || C.mute, flexShrink: 0 }} />
+        </div>))}
+    </>)}
   </>);
 }
 function Money({ t, lang, loc, txns, obligations, period, setPeriod, fseg, setFseg, recentId, onEditTxn, onEditItem, onAdd, onReport, setAsidePct }) {

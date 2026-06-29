@@ -208,7 +208,7 @@ export default function AtlasAI() {
   const [chatMsgs, setChatMsgs] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [lang, setLang] = useState("en");
+  const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "en"; });
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
   const [input, setInput] = useState("");
@@ -612,7 +612,7 @@ ${JSON.stringify(snapshot)}`;
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ position: "relative" }}>
               <button onClick={() => setLangOpen((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 999, padding: "7px 12px", fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: SF }}><GlobeIcon /> {L.short}</button>
-              {langOpen && (<div className="rise" style={{ position: "absolute", right: 0, top: 42, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 6, minWidth: 150, zIndex: 30, boxShadow: "0 18px 40px rgba(0,0,0,.45)" }}>{LANGS.map((l) => (<button key={l.code} onClick={() => { setLang(l.code); setLangOpen(false); }} style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", background: l.code === lang ? C.surface2 : "transparent", border: "none", color: l.code === lang ? C.gold : C.text, padding: "10px 12px", borderRadius: 9, fontSize: 14, cursor: "pointer", fontFamily: SF }}><span>{l.label}</span><span style={{ fontSize: 11, color: C.mute }}>{l.short}</span></button>))}</div>)}
+              {langOpen && (<div className="rise" style={{ position: "absolute", right: 0, top: 42, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 6, minWidth: 150, zIndex: 30, boxShadow: "0 18px 40px rgba(0,0,0,.45)" }}>{LANGS.map((l) => (<button key={l.code} onClick={() => { setLang(l.code); setLangOpen(false); if (typeof window !== "undefined") window.localStorage.setItem("onucore_lang", l.code); }} style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", background: l.code === lang ? C.surface2 : "transparent", border: "none", color: l.code === lang ? C.gold : C.text, padding: "10px 12px", borderRadius: 9, fontSize: 14, cursor: "pointer", fontFamily: SF }}><span>{l.label}</span><span style={{ fontSize: 11, color: C.mute }}>{l.short}</span></button>))}</div>)}
             </div>
             <button onClick={() => setProfileOpen(true)} aria-label="Profile" style={{ width: 36, height: 36, borderRadius: 999, border: `1px solid ${C.border}`, padding: 0, overflow: "hidden", cursor: "pointer", flexShrink: 0, background: profile.photo ? "transparent" : C.gold, color: "#ffffff", fontWeight: 700, fontFamily: SF, display: "flex", alignItems: "center", justifyContent: "center" }}>{profile.photo ? <img src={profile.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (profile.name ? profile.name[0].toUpperCase() : "A")}</button>
           </div>

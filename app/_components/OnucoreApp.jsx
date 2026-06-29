@@ -210,7 +210,8 @@ export default function AtlasAI() {
   const [chatLoading, setChatLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1024));
-  const contentMax = vw >= 1024 ? 800 : vw >= 680 ? 620 : 440;
+  const desktop = vw >= 1024;
+  const contentMax = desktop ? 720 : vw >= 680 ? 600 : 440;
   const navMax = Math.min(contentMax, 560);
   const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "en"; });
   const [langOpen, setLangOpen] = useState(false);
@@ -620,9 +621,16 @@ ${JSON.stringify(snapshot)}`;
       <input ref={waFileRef} type="file" accept="image/*" capture="environment" onChange={waPhoto} style={{ display: "none" }} />
       <input ref={profileFileRef} type="file" accept="image/*" onChange={pickProfilePhoto} style={{ display: "none" }} />
 
-      <div style={{ maxWidth: contentMax, margin: "0 auto", minHeight: "100vh", position: "relative", paddingBottom: 86 }}>
+      {desktop && (
+        <aside style={{ position: "fixed", left: 0, top: 0, width: 220, height: "100vh", background: C.surface, borderRight: `1px solid ${C.borderSoft}`, padding: "22px 14px 18px", display: "flex", flexDirection: "column", gap: 5, zIndex: 25, boxSizing: "border-box" }}>
+          <div style={{ padding: "0 10px 16px", fontSize: 21, fontWeight: 600, letterSpacing: "0.1em" }}>onucore<span style={{ color: C.red, fontSize: 10, verticalAlign: "super", marginLeft: 2, fontWeight: 700 }}>AI</span></div>
+          <button onClick={() => setTab("capture")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 12, border: "none", background: C.red, color: "#ffffff", cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}><PlusI /> {lang === "es" ? "Capturar" : "Capture"}</button>
+          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
+        </aside>
+      )}
+      <div style={{ maxWidth: contentMax, marginLeft: desktop ? `max(220px, calc(220px + (100% - ${contentMax + 220}px) / 2))` : "auto", marginRight: "auto", minHeight: "100vh", position: "relative", paddingBottom: desktop ? 40 : 86 }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(14px)", background: "rgba(26,26,31,.72)", padding: "16px 20px 12px", borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div><div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.16em" }}>onucore<span style={{ color: C.gold, fontSize: 10, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span></div><div style={{ fontSize: 9, letterSpacing: "0.26em", color: C.mute, marginTop: 2, textTransform: "uppercase" }}>{t["nav_" + tab]}</div></div>
+          <div>{desktop ? (<div style={{ fontSize: 20, fontWeight: 600, textTransform: "capitalize" }}>{t["nav_" + tab]}</div>) : (<><div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.16em" }}>onucore<span style={{ color: C.gold, fontSize: 10, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span></div><div style={{ fontSize: 9, letterSpacing: "0.26em", color: C.mute, marginTop: 2, textTransform: "uppercase" }}>{t["nav_" + tab]}</div></>)}</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ position: "relative" }}>
               <button onClick={() => setLangOpen((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 999, padding: "7px 12px", fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: SF }}><GlobeIcon /> {L.short}</button>
@@ -648,6 +656,7 @@ ${JSON.stringify(snapshot)}`;
         </div>
       </div>
 
+      {!desktop && (
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center" }}>
         <div style={{ width: "100%", maxWidth: navMax, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 10px calc(8px + env(safe-area-inset-bottom))", background: "rgba(26,26,31,.92)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.borderSoft}` }}>
           <Tab id="today" cur={tab} set={setTab} label={t.nav_today} icon={<HomeI />} />
@@ -658,6 +667,7 @@ ${JSON.stringify(snapshot)}`;
           <Tab id="notes" cur={tab} set={setTab} label={t.nav_notes} icon={<NoteI />} />
         </div>
       </div>
+      )}
 
       {tab === "chat" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 18, display: "flex", justifyContent: "center", background: C.bg }}>

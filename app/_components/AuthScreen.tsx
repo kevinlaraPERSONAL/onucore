@@ -52,12 +52,16 @@ function initialLang(): Lang {
   return "en";
 }
 
+function Eye() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" /><circle cx="12" cy="12" r="3" /></svg>); }
+function EyeOff() { return (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20C5 20 1 12 1 12a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>); }
+
 export default function AuthScreen() {
   const [lang, setLang] = useState<Lang>(initialLang);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const [msg, setMsg] = useState<{ kind: "err" | "ok"; text: string } | null>(null);
   const tr = TR[lang];
 
@@ -108,14 +112,16 @@ export default function AuthScreen() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: SF, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative" }}>
-      <div style={{ position: "absolute", top: 18, right: 18, display: "flex", gap: 3, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: 3 }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: SF, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative", overflow: "hidden" }}>
+      <style>{`@keyframes obGlow{0%,100%{opacity:.68;}50%{opacity:1;}}`}</style>
+      <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(78% 55% at 50% 116%, rgba(229,72,77,.30), rgba(229,72,77,.09) 42%, transparent 66%)", animation: "obGlow 7s ease-in-out infinite" }} />
+      <div style={{ position: "absolute", top: 18, right: 18, display: "flex", gap: 3, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: 3, zIndex: 2 }}>
         {(["es", "en"] as Lang[]).map((l) => (
           <button key={l} type="button" onClick={() => pickLang(l)} style={{ background: lang === l ? C.red : "transparent", color: lang === l ? "#ffffff" : C.dim, border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>{l.toUpperCase()}</button>
         ))}
       </div>
 
-      <div style={{ width: "100%", maxWidth: 380 }}>
+      <div style={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "0.14em" }}>
             onucore<span style={{ color: C.red, fontSize: 13, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
@@ -126,7 +132,12 @@ export default function AuthScreen() {
         <form onSubmit={submit} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "20px 18px" }}>
           <div style={{ fontSize: 16, fontWeight: 600 }}>{mode === "login" ? tr.login : tr.signup}</div>
           <input style={input} type="email" required placeholder={tr.emailPh} value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-          <input style={input} type="password" required minLength={6} placeholder={tr.pwPh} value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+          <div style={{ position: "relative", marginTop: 10 }}>
+            <input style={{ ...input, marginTop: 0, paddingRight: 46 }} type={showPw ? "text" : "password"} required minLength={6} placeholder={tr.pwPh} value={pw} onChange={(e) => setPw(e.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} />
+            <button type="button" tabIndex={-1} onClick={() => setShowPw((v) => !v)} aria-label={showPw ? (lang === "es" ? "Ocultar contraseña" : "Hide password") : (lang === "es" ? "Mostrar contraseña" : "Show password")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: "none", color: showPw ? C.red : C.mute, cursor: "pointer", padding: 0 }}>
+              {showPw ? <EyeOff /> : <Eye />}
+            </button>
+          </div>
 
           {msg && (
             <div style={{ marginTop: 12, fontSize: 13, color: msg.kind === "err" ? C.red : C.dim, lineHeight: 1.45 }}>{msg.text}</div>

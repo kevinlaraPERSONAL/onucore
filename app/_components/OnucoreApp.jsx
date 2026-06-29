@@ -1,9 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
-import installMockClaude from "../_lib/mockClaude.js";
 import { createClient } from "@/lib/supabase/client";
 import * as db from "@/lib/data";
-if (typeof window !== "undefined") installMockClaude();
 
 // onucore AI — App consolidada (mobile-first)
 // Hoy · Agenda (calendario + Google/Apple) · ➕Capturar · Dinero (finanzas self-employed) · Notas
@@ -15,7 +13,7 @@ const C = {
   red: "#e5484d", green: "#8a8b93", google: "#8a8b93", apple: "#8a8b93",
 };
 const SF = `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif`;
-const MODEL = "claude-sonnet-4-20250514";
+const MODEL = "claude-haiku-4-5";
 const VISION_OK = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 const WACL = { bg: "#0B141A", header: "#1F2C34", inB: "#1F2C34", outB: "#005C4B", txt: "#E9EDEF", dim: "#8696A0", grn: "#00A884" };
 const WDEST = { Finanzas: { color: "#8a8b93", icon: "💰" }, Agenda: { color: "#8a8b93", icon: "📅" }, Pendientes: { color: "#e5484d", icon: "✓" }, Notas: { color: "#8a8b93", icon: "📝" } };
@@ -295,7 +293,7 @@ Redacta title/dateLabel/detail en ${L.aiName}.
 SOLO JSON: {"items":[{"type":"","area":"personal","title":"","amount":null,"dateISO":null,"dateLabel":"","person":"","priority":"medium","detail":"","financeCat":"","incomeCat":"","account":"","deductible":true}]}
 Si nada accionable: {"items":[]}.${userCtx()}`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: sys, messages: [{ role: "user", content: text }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: sys, messages: [{ role: "user", content: text }] }) });
       const data = await res.json();
       const out = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(out);
@@ -324,7 +322,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     setBriefingLoading(true);
     const st = { eventsToday: data.filter((i) => i.type === "event" && i.dateISO === todayISO()).map((i) => i.title), urgent: data.filter((i) => (i.type === "task" || i.type === "followup") && i.priority === "high" && !i.done).map((i) => i.title), reminders: data.filter((i) => i.type === "reminder" && !i.done).map((i) => i.title), due: data.filter((i) => i.type === "obligation").map((i) => ({ t: i.title, days: daysUntil(i.dateISO) })).filter((o) => o.days != null && o.days <= 10) };
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres el Chief of Staff de onucore AI. Briefing de ${profile.briefLen === "detailed" ? "4-5" : "2-3"} frases EN ${L.aiName}, sobrio y cálido, segunda persona, solo prosa. Saludo según la hora.${userCtx()}`, messages: [{ role: "user", content: `Hora: ${now.getHours()}h. Estado: ${JSON.stringify(st)}.` }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres el Chief of Staff de onucore AI. Briefing de ${profile.briefLen === "detailed" ? "4-5" : "2-3"} frases EN ${L.aiName}, sobrio y cálido, segunda persona, solo prosa. Saludo según la hora.${userCtx()}`, messages: [{ role: "user", content: `Hora: ${now.getHours()}h. Estado: ${JSON.stringify(st)}.` }] }) });
       const d = await res.json(); setBriefing((d.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || "—");
     } catch { setBriefing("—"); } finally { setBriefingLoading(false); }
   }
@@ -350,7 +348,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     if (photo && VISION_OK.includes(photoType)) {
       try {
         const b64 = photo.split(",")[1];
-        const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI. El usuario fotografió algo que necesita recordar.${note.trim() ? ' Nota: "' + note.trim() + '".' : ""} SOLO JSON: {"title":"","detail":"","area":"personal"}. title EN ${L.aiName}, accionable. area ∈ work|family|personal|health.`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: photoType, data: b64 } }, { type: "text", text: "Genera el recordatorio." }] }] }) });
+        const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI. El usuario fotografió algo que necesita recordar.${note.trim() ? ' Nota: "' + note.trim() + '".' : ""} SOLO JSON: {"title":"","detail":"","area":"personal"}. title EN ${L.aiName}, accionable. area ∈ work|family|personal|health.`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: photoType, data: b64 } }, { type: "text", text: "Genera el recordatorio." }] }] }) });
         const d = await res.json(); const o = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim(); const p = JSON.parse(o); title = p.title || title; detail = p.detail || ""; if (AREAS[p.area]) area = p.area;
       } catch {}
     }
@@ -376,7 +374,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
       setScanning(true);
       try {
         const b64 = rd.result.split(",")[1];
-        const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI. El usuario fotografió un recibo o comprobante para registrar un movimiento financiero. Extrae los datos. SOLO JSON: {"kind":"expense","amount":0,"merchant":"","dateISO":"","financeCat":"office","deductible":true}. kind: "expense" si es recibo de compra/gasto, "income" si es un comprobante de pago recibido o factura cobrada. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. dateISO la fecha del recibo (YYYY-MM-DD) o "". merchant: el comercio o la fuente del dinero. deductible: true si parece gasto de negocio deducible.`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Extrae los datos del recibo." }] }] }) });
+        const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI. El usuario fotografió un recibo o comprobante para registrar un movimiento financiero. Extrae los datos. SOLO JSON: {"kind":"expense","amount":0,"merchant":"","dateISO":"","financeCat":"office","deductible":true}. kind: "expense" si es recibo de compra/gasto, "income" si es un comprobante de pago recibido o factura cobrada. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. dateISO la fecha del recibo (YYYY-MM-DD) o "". merchant: el comercio o la fuente del dinero. deductible: true si parece gasto de negocio deducible.`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Extrae los datos del recibo." }] }] }) });
         const d = await res.json(); const o = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim(); const p = JSON.parse(o);
         const kind = p.kind === "income" ? "income" : "expense";
         const cat = kind === "income" ? "client" : (catBy(p.financeCat).k === p.financeCat ? p.financeCat : "office");
@@ -407,7 +405,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
 type ∈ event,task,obligation,expense,income,note,idea,reminder. area ∈ work,family,personal,health. Si expense: financeCat ∈ [${CATS.map((c) => c.k).join(",")}], account ∈ [amex,visa,paypal,bank,cash], deductible bool. Si income: incomeCat ∈ [client,sales,other_income], account.
 Devuelve SOLO JSON: {"items":[{"type":"","area":"personal","title":"","amount":null,"dateISO":null,"dateLabel":"","financeCat":"","incomeCat":"","account":"","deductible":true}],"reply":""}
 reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empieza con ✓, di qué entendiste. Si nada accionable: items vacío y reply pidiendo más detalle.${userCtx()}`;
-    const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: sys, messages: [{ role: "user", content: text }] }) });
+    const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: sys, messages: [{ role: "user", content: text }] }) });
     const d = await res.json(); const o = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim(); return JSON.parse(o);
   }
   async function waSend(text, kind, voiceText) {
@@ -431,7 +429,7 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
       setWaTyping(true);
       try {
         const b64 = rd.result.split(",")[1];
-        const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI por WhatsApp. El usuario mandó la foto de un recibo. Extrae el gasto. SOLO JSON: {"items":[{"type":"expense","title":"","amount":0,"financeCat":"office","account":"amex","deductible":true,"area":"personal"}],"reply":""}. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. reply: confirmación corta estilo WhatsApp en español con ✓, monto y comercio, "→ Finanzas".`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Lee el recibo y regístralo." }] }] }) });
+        const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI por WhatsApp. El usuario mandó la foto de un recibo. Extrae el gasto. SOLO JSON: {"items":[{"type":"expense","title":"","amount":0,"financeCat":"office","account":"amex","deductible":true,"area":"personal"}],"reply":""}. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. reply: confirmación corta estilo WhatsApp en español con ✓, monto y comercio, "→ Finanzas".`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Lee el recibo y regístralo." }] }] }) });
         const d = await res.json(); const o = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim(); const p = JSON.parse(o); const ni = normalizeNi(p.items);
         if (ni.length) { commitNi(ni); setRecentId(ni[0].id); setTimeout(() => setRecentId(null), 2000); }
         setWaTyping(false); setWaMsgs((m) => [...m, { id: uid(), from: "bot", text: p.reply || "✓ → Finanzas", cards: ni.map((n) => ({ title: n.title, dest: "Finanzas", amount: n.amount, ded: n.ded })) }]);
@@ -449,7 +447,7 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
       txns: txns.map((x) => ({ kind: x.kind, amount: x.amount, category: (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], account: acctBy(x.account).label, dateISO: x.dateISO, note: x.note, deductibleAmount: dedAmount(x) })),
     };
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI, el chief of staff del usuario. Responde su pregunta USANDO ÚNICAMENTE los datos JSON que te paso (su agenda, pendientes, pagos, finanzas y notas). Hoy es ${todayISO()}. Responde CORTO, directo y útil, EN EL MISMO IDIOMA de la pregunta. Montos en USD. Si te piden sumar/contar, hazlo con precisión. Si los datos no alcanzan para responder, dilo con honestidad. Solo prosa, sin markdown.${userCtx()}`, messages: [{ role: "user", content: `Datos:\n${JSON.stringify(snapshot)}\n\nPregunta: ${query}` }] }) });
+      const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI, el chief of staff del usuario. Responde su pregunta USANDO ÚNICAMENTE los datos JSON que te paso (su agenda, pendientes, pagos, finanzas y notas). Hoy es ${todayISO()}. Responde CORTO, directo y útil, EN EL MISMO IDIOMA de la pregunta. Montos en USD. Si te piden sumar/contar, hazlo con precisión. Si los datos no alcanzan para responder, dilo con honestidad. Solo prosa, sin markdown.${userCtx()}`, messages: [{ role: "user", content: `Datos:\n${JSON.stringify(snapshot)}\n\nPregunta: ${query}` }] }) });
       const d = await res.json(); setAskA((d.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || "—");
     } catch { setAskA(t.error); } finally { setAskLoading(false); }
   }

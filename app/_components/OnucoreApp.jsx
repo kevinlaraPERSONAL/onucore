@@ -28,10 +28,8 @@ const GOALS = [
   { en: "Less stress, forget less", es: "Menos estrés, olvidar menos" },
 ];
 const CONNS = [
-  { k: "gcal", name: "Google Calendar", en: "See your Google events in your agenda", es: "Ve tus eventos de Google en tu agenda" },
-  { k: "apple", name: "Apple Calendar", en: "Sync your iPhone calendar", es: "Sincroniza el calendario de tu iPhone" },
-  { k: "gmail", name: "Gmail", en: "Forward invoices & receipts to log them", es: "Reenvía facturas y recibos para registrarlos" },
-  { k: "contacts", name: "Contacts", en: "Recognize the people you mention", es: "Reconoce a las personas que mencionas" },
+  { k: "google", name: "Google", en: "Sync your calendar (Gmail & contacts soon)", es: "Sincroniza tu calendario (Gmail y contactos pronto)" },
+  { k: "apple", name: "Apple Calendar", en: "Sync your iPhone calendar", es: "Sincroniza el calendario de tu iPhone", soon: true },
   { k: "whatsapp", name: "WhatsApp", en: "Capture by message or voice note", es: "Captura por mensaje o nota de voz" },
 ];
 
@@ -835,13 +833,14 @@ ${JSON.stringify(snapshot)}`;
               <div style={{ fontSize: 12.5, color: C.mute, margin: "0 2px 8px", lineHeight: 1.45 }}>{t.conn_sub}</div>
               <div style={cardS}>
                 {CONNS.map((cn, i) => {
-                  const on = cn.k === "gcal" ? gcal.connected : cn.k === "apple" ? calSrc.apple : cn.k === "whatsapp" ? true : profile.conns[cn.k];
+                  const on = cn.k === "google" ? gcal.connected : cn.k === "whatsapp" ? true : false;
                   const builtin = cn.k === "whatsapp";
-                  const toggle = () => { if (builtin) return; if (cn.k === "gcal") { if (gcal.connected) disconnectGoogle(); else connectGoogle(); } else if (cn.k === "apple") setCalSrc((c) => ({ ...c, apple: !c.apple })); else setProfile((p) => ({ ...p, conns: { ...p.conns, [cn.k]: !p.conns[cn.k] } })); };
+                  const soon = !!cn.soon;
+                  const toggle = () => { if (builtin || soon) return; if (cn.k === "google") { if (gcal.connected) disconnectGoogle(); else connectGoogle(); } };
                   return (<div key={cn.k} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 0", borderBottom: i < CONNS.length - 1 ? `1px solid ${C.borderSoft}` : "none" }}>
                     <span style={{ width: 36, height: 36, borderRadius: 9, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: on ? C.gold : C.mute, flexShrink: 0 }}><LinkIcon /></span>
-                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5 }}>{cn.name}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cn.k === "gcal" && gcal.connected && gcal.email ? gcal.email : cn[lang === "es" ? "es" : "en"]}</div></div>
-                    <button onClick={toggle} disabled={builtin} style={{ flexShrink: 0, borderRadius: 999, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: builtin ? "default" : "pointer", fontFamily: SF, border: `1px solid ${on ? C.goldSoft : C.border}`, background: on ? "rgba(229,72,77,.12)" : "transparent", color: on ? C.gold : C.dim }}>{builtin ? t.built_in : on ? t.connected : t.connect}</button>
+                    <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5 }}>{cn.name}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cn.k === "google" && gcal.connected && gcal.email ? gcal.email : cn[lang === "es" ? "es" : "en"]}</div></div>
+                    <button onClick={toggle} disabled={builtin || soon} style={{ flexShrink: 0, borderRadius: 999, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: (builtin || soon) ? "default" : "pointer", fontFamily: SF, border: `1px solid ${on ? C.goldSoft : C.border}`, background: on ? "rgba(229,72,77,.12)" : "transparent", color: on ? C.gold : (soon ? C.mute : C.dim) }}>{builtin ? t.built_in : soon ? (lang === "es" ? "Pronto" : "Soon") : on ? t.connected : t.connect}</button>
                   </div>);
                 })}
               </div>
@@ -1056,14 +1055,13 @@ function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalS
   const monthLabel = new Date(calY, calM, 1).toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { month: "long", year: "numeric" });
   const firstOffset = (new Date(calY, calM, 1).getDay() + 6) % 7;
   const dim = new Date(calY, calM + 1, 0).getDate();
-  const dayEvents = (iso) => { let a = items.filter((i) => i.type === "event" && i.dateISO === iso).map((e) => ({ ...e, source: "atlas", time: e.dateLabel })); if (calSrc.google) a = a.concat((gcalEvents || []).filter((e) => e.dateISO === iso)); if (calSrc.apple) a = a.concat(mockCal("apple", calY, calM).filter((e) => e.dateISO === iso)); return a.sort((x, y) => parseT(x.time) - parseT(y.time)); };
+  const dayEvents = (iso) => { let a = items.filter((i) => i.type === "event" && i.dateISO === iso).map((e) => ({ ...e, source: "atlas", time: e.dateLabel })); if (calSrc.google) a = a.concat((gcalEvents || []).filter((e) => e.dateISO === iso)); return a.sort((x, y) => parseT(x.time) - parseT(y.time)); };
   const shift = (delta) => { let nm = calM + delta, ny = calY; if (nm < 0) { nm = 11; ny--; } if (nm > 11) { nm = 0; ny++; } setCalY(ny); setCalM(nm); setCalSel(toISO(ny, nm, 1)); };
   const sel = dayEvents(calSel); const selDate = new Date(calSel + "T00:00:00"); const WD = lang === "es" ? ["L", "M", "X", "J", "V", "S", "D"] : ["M", "T", "W", "T", "F", "S", "S"];
   return (<>
     <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
       <SrcChip label="onucore" color={SRC.atlas} on count />
       <SrcChip label="Google" color={SRC.google} on={gcal.connected && calSrc.google} connectLabel={gcal.connected ? undefined : t.cal_connect} onClick={() => (gcal.connected ? setCalSrc((c) => ({ ...c, google: !c.google })) : connectGoogle())} />
-      <SrcChip label="Apple" color={SRC.apple} on={calSrc.apple} connectLabel={t.cal_connect} onClick={() => setCalSrc((c) => ({ ...c, apple: !c.apple }))} />
     </div>
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", margin: "16px 0 8px" }}>
       <button onClick={() => shift(-1)} style={navBtn}>‹</button>

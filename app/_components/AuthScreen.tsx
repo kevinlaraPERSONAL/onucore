@@ -113,8 +113,9 @@ export default function AuthScreen() {
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: SF, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, position: "relative", overflow: "hidden" }}>
-      <style>{`@keyframes obGlow{0%,100%{opacity:.68;}50%{opacity:1;}}`}</style>
-      <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(78% 55% at 50% 116%, rgba(229,72,77,.30), rgba(229,72,77,.09) 42%, transparent 66%)", animation: "obGlow 7s ease-in-out infinite" }} />
+      <style>{`@keyframes obGlow{0%,100%{opacity:.8;}50%{opacity:1;}}`}</style>
+      <div aria-hidden style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0, background: "radial-gradient(96% 62% at 50% 114%, rgba(229,72,77,.44), rgba(229,72,77,.16) 44%, transparent 76%)", animation: "obGlow 7s ease-in-out infinite" }} />
+      <div aria-hidden style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "44%", pointerEvents: "none", zIndex: 0, background: "radial-gradient(58% 100% at 50% 126%, rgba(229,72,77,.58), transparent 72%)", animation: "obGlow 7s ease-in-out infinite" }} />
       <div style={{ position: "absolute", top: 18, right: 18, display: "flex", gap: 3, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: 3, zIndex: 2 }}>
         {(["es", "en"] as Lang[]).map((l) => (
           <button key={l} type="button" onClick={() => pickLang(l)} style={{ background: lang === l ? C.red : "transparent", color: lang === l ? "#ffffff" : C.dim, border: "none", borderRadius: 999, padding: "5px 11px", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>{l.toUpperCase()}</button>

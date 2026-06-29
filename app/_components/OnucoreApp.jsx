@@ -209,6 +209,9 @@ export default function AtlasAI() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1024));
+  const contentMax = vw >= 1024 ? 800 : vw >= 680 ? 620 : 440;
+  const navMax = Math.min(contentMax, 560);
   const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "en"; });
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
@@ -334,6 +337,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   useEffect(() => { waEndRef.current && waEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [waMsgs, waTyping]);
   useEffect(() => { chatEndRef.current && chatEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatLoading]);
   useEffect(() => { if (typeof window !== "undefined" && window.sessionStorage.getItem("onucore_onboard") === "1") setShowOnboarding(true); }, []);
+  useEffect(() => { const onR = () => setVw(window.innerWidth); window.addEventListener("resize", onR); return () => window.removeEventListener("resize", onR); }, []);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { setVoiceAvailable(false); return; }
@@ -616,7 +620,7 @@ ${JSON.stringify(snapshot)}`;
       <input ref={waFileRef} type="file" accept="image/*" capture="environment" onChange={waPhoto} style={{ display: "none" }} />
       <input ref={profileFileRef} type="file" accept="image/*" onChange={pickProfilePhoto} style={{ display: "none" }} />
 
-      <div style={{ maxWidth: 440, margin: "0 auto", minHeight: "100vh", position: "relative", paddingBottom: 86 }}>
+      <div style={{ maxWidth: contentMax, margin: "0 auto", minHeight: "100vh", position: "relative", paddingBottom: 86 }}>
         <div style={{ position: "sticky", top: 0, zIndex: 20, backdropFilter: "blur(14px)", background: "rgba(26,26,31,.72)", padding: "16px 20px 12px", borderBottom: `1px solid ${C.borderSoft}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div><div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.16em" }}>onucore<span style={{ color: C.gold, fontSize: 10, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span></div><div style={{ fontSize: 9, letterSpacing: "0.26em", color: C.mute, marginTop: 2, textTransform: "uppercase" }}>{t["nav_" + tab]}</div></div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -645,7 +649,7 @@ ${JSON.stringify(snapshot)}`;
       </div>
 
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center" }}>
-        <div style={{ width: "100%", maxWidth: 440, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 10px calc(8px + env(safe-area-inset-bottom))", background: "rgba(26,26,31,.92)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.borderSoft}` }}>
+        <div style={{ width: "100%", maxWidth: navMax, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 10px calc(8px + env(safe-area-inset-bottom))", background: "rgba(26,26,31,.92)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.borderSoft}` }}>
           <Tab id="today" cur={tab} set={setTab} label={t.nav_today} icon={<HomeI />} />
           <Tab id="agenda" cur={tab} set={setTab} label={t.nav_agenda} icon={<CalI />} />
           <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
@@ -657,7 +661,7 @@ ${JSON.stringify(snapshot)}`;
 
       {tab === "chat" && (
         <div style={{ position: "fixed", inset: 0, zIndex: 18, display: "flex", justifyContent: "center", background: C.bg }}>
-          <div style={{ width: "100%", maxWidth: 440, height: "100%", display: "flex", flexDirection: "column", paddingTop: 66 }}>
+          <div style={{ width: "100%", maxWidth: contentMax, height: "100%", display: "flex", flexDirection: "column", paddingTop: 66 }}>
             <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
               {chatMsgs.length === 0 && !chatLoading && (
                 <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 16, padding: "0 8px" }}>
@@ -810,7 +814,7 @@ ${JSON.stringify(snapshot)}`;
 
       {showOnboarding && (
         <div style={{ position: "fixed", inset: 0, zIndex: 130, background: C.bg, display: "flex", justifyContent: "center", overflowY: "auto" }}>
-          <div style={{ width: "100%", maxWidth: 440, padding: "calc(env(safe-area-inset-top) + 30px) 22px 36px", display: "flex", flexDirection: "column" }}>
+          <div style={{ width: "100%", maxWidth: Math.min(contentMax, 560), padding: "calc(env(safe-area-inset-top) + 30px) 22px 36px", display: "flex", flexDirection: "column" }}>
             <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: "0.08em" }}>onucore<span style={{ color: C.red, fontSize: 11, verticalAlign: "super", marginLeft: 2, fontWeight: 700 }}>AI</span></div>
             <div style={{ fontSize: 21, fontWeight: 600, marginTop: 20, lineHeight: 1.3 }}>{lang === "es" ? "Personalicemos onucore" : "Let's set up onucore"}</div>
             <div style={{ fontSize: 13.5, color: C.dim, marginTop: 8, lineHeight: 1.5 }}>{lang === "es" ? "Cuéntame un poco de ti para que sea TU asistente, no uno genérico. Puedes cambiar todo después en tu perfil." : "Tell me a bit about you so it's YOUR assistant, not a generic one. You can change all of this later in your profile."}</div>

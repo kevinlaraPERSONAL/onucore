@@ -456,11 +456,43 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
     } catch { setAskA(t.error); } finally { setAskLoading(false); }
   }
 
+  const CHAT_TOOL = {
+    name: "add_to_onucore",
+    description: "Guarda entradas REALES en onucore (agenda, dinero, pendientes, notas). Úsala SOLO cuando el usuario quiera AGREGAR o REGISTRAR algo (agendar una cita, anotar un gasto/ingreso, crear un recordatorio, tarea o nota). NO la uses para responder preguntas sobre datos que ya existen. Una sola frase puede contener varios ítems.",
+    input_schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          description: "Entradas a crear.",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["event", "task", "reminder", "obligation", "note", "idea", "followup", "contact", "expense", "income"], description: "Tipo de entrada." },
+              title: { type: "string", description: "Título corto y accionable." },
+              area: { type: "string", enum: ["work", "family", "personal", "health"] },
+              amount: { type: "number", description: "Monto (solo para expense/income)." },
+              dateISO: { type: "string", description: "Fecha YYYY-MM-DD si aplica." },
+              dateLabel: { type: "string", description: "Etiqueta de fecha legible, ej. 'mañana 3pm'." },
+              detail: { type: "string" },
+              priority: { type: "string", enum: ["low", "medium", "high"] },
+              financeCat: { type: "string", description: "Categoría de gasto. Una de: " + CATS.map((c) => c.k).join(", ") },
+              incomeCat: { type: "string", description: "Categoría de ingreso: client, sales u other_income." },
+              account: { type: "string", description: "Método: amex, visa, paypal, bank o cash." },
+              deductible: { type: "boolean", description: "Si el gasto parece deducible de impuestos." },
+            },
+            required: ["type", "title"],
+          },
+        },
+      },
+      required: ["items"],
+    },
+  };
+
   async function sendChat(text) {
     const msg = (text ?? "").trim();
     if (!msg || chatLoading) return;
-    const history = [...chatMsgs, { role: "user", content: msg }];
-    setChatMsgs(history);
+    setChatMsgs((prev) => [...prev, { role: "user", content: msg }]);
     setChatInput("");
     setChatLoading(true);
     const snapshot = {
@@ -468,20 +500,48 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
       items: items.map((i) => ({ type: i.type, area: i.area, title: i.title, dateISO: i.dateISO, dateLabel: i.dateLabel, amount: i.amount, done: i.done, detail: i.detail })),
       txns: txns.map((x) => ({ kind: x.kind, amount: x.amount, category: (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], account: acctBy(x.account).label, dateISO: x.dateISO, note: x.note, deductibleAmount: dedAmount(x) })),
     };
+    const sys = `Eres onucore AI, el asistente personal y chief of staff del usuario, conversando por chat. Cálido, cercano y útil. IDIOMA (OBLIGATORIO): TODA tu respuesta — y cualquier título que generes para guardar — van en ${lang === "es" ? "ESPAÑOL" : "INGLÉS"}, sin excepción, sin importar el idioma de estas instrucciones ni de los datos.
+PUEDES ACTUAR: cuando el usuario quiera AGREGAR o REGISTRAR algo (agendar una cita, anotar un gasto o ingreso, crear un recordatorio, tarea o nota), usa la herramienta add_to_onucore para guardarlo DE VERDAD. Resuelve fechas relativas a ISO (hoy es ${todayISO()}). Para gastos, infiere financeCat, account y deducible razonables. Después de guardar, confirma en UNA frase corta y natural lo que hiciste (no repitas todos los campos). NO uses la herramienta para responder preguntas sobre datos que ya existen — eso respóndelo con texto usando los datos de abajo.
+Usa los datos del usuario para responder con precisión (sumas, fechas, conteos); si no alcanzan, dilo con honestidad. Conversacional y conciso (1-4 frases salvo que pidan más). Solo prosa, sin markdown.${userCtx()}
+
+Datos del usuario:
+${JSON.stringify(snapshot)}`;
+    const apiMsgs = [...chatMsgs.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: msg }];
     try {
-      const res = await fetch("/api/claude", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 1000,
-          system: `Eres onucore AI, el asistente personal y chief of staff del usuario, conversando por chat. Cálido, cercano y útil. IDIOMA (importante): responde SIEMPRE en el mismo idioma del ÚLTIMO mensaje del usuario — si te escribe en inglés responde en inglés, si en español responde en español — sin importar el idioma de estas instrucciones ni de los datos. Usa los datos del usuario (agenda, pendientes, finanzas, notas) que te paso abajo para responder con precisión —sumas, fechas y conteos exactos—; si no alcanzan, dilo con honestidad. Hoy es ${todayISO()}. Conversacional pero conciso (1-4 frases salvo que pidan más). Solo prosa, sin markdown.${userCtx()}\n\nDatos del usuario:\n${JSON.stringify(snapshot)}`,
-          messages: history,
-        }),
-      });
-      const d = await res.json();
-      const reply = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || "—";
-      setChatMsgs((h) => [...h, { role: "assistant", content: reply }]);
+      const cards = [];
+      for (let turn = 0; turn < 4; turn++) {
+        const res = await fetch("/api/claude", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ model: MODEL, max_tokens: 1200, system: sys, messages: apiMsgs, tools: [CHAT_TOOL] }),
+        });
+        const d = await res.json();
+        const content = d.content || [];
+        const toolUses = content.filter((b) => b.type === "tool_use");
+        if (d.stop_reason === "tool_use" && toolUses.length) {
+          apiMsgs.push({ role: "assistant", content });
+          const results = [];
+          for (const tu of toolUses) {
+            let note = "ok";
+            if (tu.name === "add_to_onucore" && tu.input && Array.isArray(tu.input.items)) {
+              const ni = normalizeNi(tu.input.items);
+              if (ni.length) {
+                commitNi(ni);
+                cards.push(...ni.map((n) => ({ title: n.title, dest: destOf(n), amount: n.amount, ded: n.ded })));
+                setRecentId(ni[0].id); setTimeout(() => setRecentId(null), 2000);
+              }
+              note = `saved=${ni.length}`;
+            }
+            results.push({ type: "tool_result", tool_use_id: tu.id, content: note });
+          }
+          apiMsgs.push({ role: "user", content: results });
+          continue;
+        }
+        const reply = content.filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || (cards.length ? "✓" : "—");
+        setChatMsgs((h) => [...h, { role: "assistant", content: reply, cards: cards.length ? cards : undefined }]);
+        return;
+      }
+      setChatMsgs((h) => [...h, { role: "assistant", content: "✓", cards: cards.length ? cards : undefined }]);
     } catch {
       setChatMsgs((h) => [...h, { role: "assistant", content: t.error }]);
     } finally {
@@ -605,7 +665,7 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
               )}
               {chatMsgs.map((m, i) => (
                 <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%" }}>
-                  <div style={{ background: m.role === "user" ? C.red : C.surface, color: m.role === "user" ? "#ffffff" : C.text, border: m.role === "assistant" ? `1px solid ${C.border}` : "none", padding: "10px 13px", borderRadius: 16, borderBottomRightRadius: m.role === "user" ? 5 : 16, borderBottomLeftRadius: m.role === "assistant" ? 5 : 16, fontSize: 14.5, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.content}</div>
+                  <div style={{ background: m.role === "user" ? C.red : C.surface, color: m.role === "user" ? "#ffffff" : C.text, border: m.role === "assistant" ? `1px solid ${C.border}` : "none", padding: "10px 13px", borderRadius: 16, borderBottomRightRadius: m.role === "user" ? 5 : 16, borderBottomLeftRadius: m.role === "assistant" ? 5 : 16, fontSize: 14.5, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.content}{m.cards && m.cards.length > 0 && (<div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>{m.cards.map((c, ci) => { const dd = WDEST[c.dest] || WDEST.Notas; return (<div key={ci} style={{ display: "flex", alignItems: "center", gap: 9, background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 10px" }}><span style={{ fontSize: 15 }}>{dd.icon}</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13, color: C.text }}>{c.title}</div><div style={{ fontSize: 11, color: C.dim, marginTop: 1 }}>{c.dest}{c.amount != null ? ` · $${c.amount}` : ""}{c.ded ? " · deducible" : ""}</div></div></div>); })}</div>)}</div>
                 </div>
               ))}
               {chatLoading && (

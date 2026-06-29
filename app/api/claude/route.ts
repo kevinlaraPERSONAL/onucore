@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     max_tokens?: unknown;
     system?: unknown;
     messages?: unknown;
+    tools?: unknown;
   };
   try {
     body = await request.json();
@@ -58,17 +59,19 @@ export async function POST(request: Request) {
   const model = ALLOWED_MODELS.has(reqModel) ? reqModel : DEFAULT_MODEL;
   const max_tokens = Math.min(Math.max(Number(body?.max_tokens) || 1024, 1), 4096);
   const system = typeof body?.system === "string" && body.system ? body.system : undefined;
+  const tools = Array.isArray(body?.tools) ? (body.tools as Anthropic.Tool[]) : undefined;
 
   try {
     const msg = await anthropic.messages.create({
       model,
       max_tokens,
       ...(system ? { system } : {}),
+      ...(tools ? { tools } : {}),
       // The app builds messages in the exact Anthropic format (string content,
-      // or [{type:"image",...},{type:"text",...}] for vision).
+      // [{type:"image",...},{type:"text",...}] for vision, or tool_use/tool_result blocks).
       messages: messages as Anthropic.MessageParam[],
     });
-    return Response.json({ content: msg.content });
+    return Response.json({ content: msg.content, stop_reason: msg.stop_reason });
   } catch (err) {
     const status = (err as { status?: number })?.status ?? 500;
     const message = (err as { message?: string })?.message ?? "claude_error";

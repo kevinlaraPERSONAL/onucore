@@ -67,7 +67,7 @@ const ACCOUNTS = [{ k: "amex", label: "Amex", type: "credit" }, { k: "visa", lab
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_money: "Money", nav_notes: "Notes", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -103,7 +103,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_money: "Dinero", nav_notes: "Notas", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -205,6 +205,9 @@ export default function AtlasAI() {
   const [items, setItems] = useState([]);
   const [txns, setTxns] = useState([]);
   const [tab, setTab] = useState("today");
+  const [chatMsgs, setChatMsgs] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
   const [lang, setLang] = useState("en");
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
@@ -248,7 +251,7 @@ export default function AtlasAI() {
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
-  const recogRef = useRef(null); const fileRef = useRef(null); const receiptRef = useRef(null); const waFileRef = useRef(null); const waEndRef = useRef(null); const profileFileRef = useRef(null);
+  const recogRef = useRef(null); const fileRef = useRef(null); const receiptRef = useRef(null); const waFileRef = useRef(null); const waEndRef = useRef(null); const chatEndRef = useRef(null); const profileFileRef = useRef(null);
 
   const supabase = useMemo(() => createClient(), []);
   const [userId, setUserId] = useState(null);
@@ -328,6 +331,7 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   }
   useEffect(() => { generateBriefing(items); /* eslint-disable-next-line */ }, [lang]);
   useEffect(() => { waEndRef.current && waEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [waMsgs, waTyping]);
+  useEffect(() => { chatEndRef.current && chatEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatLoading]);
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) { setVoiceAvailable(false); return; }
@@ -452,6 +456,39 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
     } catch { setAskA(t.error); } finally { setAskLoading(false); }
   }
 
+  async function sendChat(text) {
+    const msg = (text ?? "").trim();
+    if (!msg || chatLoading) return;
+    const history = [...chatMsgs, { role: "user", content: msg }];
+    setChatMsgs(history);
+    setChatInput("");
+    setChatLoading(true);
+    const snapshot = {
+      today: todayISO(),
+      items: items.map((i) => ({ type: i.type, area: i.area, title: i.title, dateISO: i.dateISO, dateLabel: i.dateLabel, amount: i.amount, done: i.done, detail: i.detail })),
+      txns: txns.map((x) => ({ kind: x.kind, amount: x.amount, category: (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], account: acctBy(x.account).label, dateISO: x.dateISO, note: x.note, deductibleAmount: dedAmount(x) })),
+    };
+    try {
+      const res = await fetch("/api/claude", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL,
+          max_tokens: 1000,
+          system: `Eres onucore AI, el asistente personal y chief of staff del usuario, conversando por chat. Cálido, cercano y útil. IDIOMA (importante): responde SIEMPRE en el mismo idioma del ÚLTIMO mensaje del usuario — si te escribe en inglés responde en inglés, si en español responde en español — sin importar el idioma de estas instrucciones ni de los datos. Usa los datos del usuario (agenda, pendientes, finanzas, notas) que te paso abajo para responder con precisión —sumas, fechas y conteos exactos—; si no alcanzan, dilo con honestidad. Hoy es ${todayISO()}. Conversacional pero conciso (1-4 frases salvo que pidan más). Solo prosa, sin markdown.${userCtx()}\n\nDatos del usuario:\n${JSON.stringify(snapshot)}`,
+          messages: history,
+        }),
+      });
+      const d = await res.json();
+      const reply = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || "—";
+      setChatMsgs((h) => [...h, { role: "assistant", content: reply }]);
+    } catch {
+      setChatMsgs((h) => [...h, { role: "assistant", content: t.error }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   function userCtx() {
     const p = profile; const es = lang === "es"; const b = [];
     if (p.name) b.push(`${es ? "Nombre" : "Name"}: ${p.name}`);
@@ -542,10 +579,49 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
           <Tab id="today" cur={tab} set={setTab} label={t.nav_today} icon={<HomeI />} />
           <Tab id="agenda" cur={tab} set={setTab} label={t.nav_agenda} icon={<CalI />} />
           <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
+          <Tab id="chat" cur={tab} set={setTab} label={t.nav_chat} icon={<ChatI />} />
           <Tab id="money" cur={tab} set={setTab} label={t.nav_money} icon={<WalletI />} />
           <Tab id="notes" cur={tab} set={setTab} label={t.nav_notes} icon={<NoteI />} />
         </div>
       </div>
+
+      {tab === "chat" && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 18, display: "flex", justifyContent: "center", background: C.bg }}>
+          <div style={{ width: "100%", maxWidth: 440, height: "100%", display: "flex", flexDirection: "column", paddingTop: 66 }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "10px 16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {chatMsgs.length === 0 && !chatLoading && (
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 16, padding: "0 8px" }}>
+                  <div style={{ width: 62, height: 62, borderRadius: 999, background: C.red, display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff" }}><ChatI big /></div>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 600 }}>{lang === "es" ? "Hola, soy onucore" : "Hi, I'm onucore"}</div>
+                    <div style={{ fontSize: 13.5, color: C.dim, marginTop: 7, lineHeight: 1.5, maxWidth: 290 }}>{lang === "es" ? "Tu asistente personal. Pregúntame lo que sea sobre tu agenda, tu dinero o tus pendientes." : "Your personal assistant. Ask me anything about your schedule, money, or to-dos."}</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 2 }}>
+                    {(lang === "es" ? ["¿Qué tengo hoy?", "¿Cuánto gasté este mes?", "¿Qué pagos vienen?"] : ["What's on today?", "How much did I spend this month?", "Any upcoming payments?"]).map((s) => (
+                      <button key={s} onClick={() => sendChat(s)} style={{ background: C.surface, border: `1px solid ${C.border}`, color: C.text, borderRadius: 999, padding: "9px 14px", fontSize: 13, cursor: "pointer", fontFamily: SF }}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {chatMsgs.map((m, i) => (
+                <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "86%" }}>
+                  <div style={{ background: m.role === "user" ? C.red : C.surface, color: m.role === "user" ? "#ffffff" : C.text, border: m.role === "assistant" ? `1px solid ${C.border}` : "none", padding: "10px 13px", borderRadius: 16, borderBottomRightRadius: m.role === "user" ? 5 : 16, borderBottomLeftRadius: m.role === "assistant" ? 5 : 16, fontSize: 14.5, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.content}</div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ alignSelf: "flex-start", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, borderBottomLeftRadius: 5, padding: "13px 15px", display: "flex", gap: 4 }}>{[0, 1, 2].map((i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: C.mute, animation: `blink 1.3s ${i * 0.2}s infinite` }} />)}</div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            <div style={{ flexShrink: 0, padding: "8px 14px calc(80px + env(safe-area-inset-bottom))" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 24, padding: "5px 5px 5px 16px" }}>
+                <input className="ph" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendChat(chatInput)} placeholder={lang === "es" ? "Escríbele a onucore…" : "Message onucore…"} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontSize: 15, fontFamily: SF, minWidth: 0 }} />
+                <button onClick={() => sendChat(chatInput)} disabled={!chatInput.trim() || chatLoading} aria-label="Send" style={{ width: 42, height: 42, borderRadius: 999, border: "none", background: C.red, color: "#ffffff", fontSize: 17, cursor: chatInput.trim() && !chatLoading ? "pointer" : "default", opacity: chatInput.trim() && !chatLoading ? 1 : 0.45, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>➤</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (<div className="rise" onClick={() => setToast(null)} style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 86, maxWidth: 400, width: "calc(100% - 40px)", zIndex: 40, background: C.surface, border: `1px solid ${toast.kind === "ok" ? C.goldSoft : C.red}`, borderRadius: 14, padding: "12px 16px", fontSize: 12.5, color: toast.kind === "ok" ? C.gold : C.red, boxShadow: "0 14px 40px rgba(0,0,0,.45)" }}>{toast.text}</div>)}
 
@@ -931,6 +1007,7 @@ function CalI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="
 function WalletI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9" /><circle cx="17" cy="13" r="1.3" fill="currentColor" stroke="none" /></svg>); }
 function NoteI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>); }
 function PlusI() { return (<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>); }
+function ChatI({ big }) { const s = big ? 27 : 21; return (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5h.5a8.5 8.5 0 0 1 8 8z" /></svg>); }
 function PlusSm() { return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>); }
 function WaIcon() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z" /></svg>); }
 function SparkIcon() { return (<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e5484d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 4.9L18.7 9.7l-4.9 1.8L12 16.4l-1.8-4.9L5.3 9.7l4.9-1.8z" /><path d="M19 15l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z" /></svg>); }

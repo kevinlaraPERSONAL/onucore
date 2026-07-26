@@ -84,9 +84,17 @@ export async function POST() {
           source: "plaid",
           plaid_id: t.transaction_id,
         }));
+      errors.push("got:" + (tx.data.transactions || []).length);
       if (rows.length) {
-        const up = await supabase.from("txns").upsert(rows, { onConflict: "plaid_id", ignoreDuplicates: true });
-        if (!up.error) txnsAdded += rows.length;
+        const ids = rows.map((r) => r.plaid_id);
+        const { data: existing } = await supabase.from("txns").select("plaid_id").eq("user_id", user.id).in("plaid_id", ids);
+        const have = new Set((existing || []).map((x: { plaid_id: string }) => x.plaid_id));
+        const fresh = rows.filter((r) => !have.has(r.plaid_id));
+        if (fresh.length) {
+          const ins = await supabase.from("txns").insert(fresh);
+          if (ins.error) errors.push("ins:" + ins.error.message);
+          else txnsAdded += fresh.length;
+        }
       }
     } catch (e) {
       errors.push("tx:" + ((e as { message?: string })?.message || "err"));

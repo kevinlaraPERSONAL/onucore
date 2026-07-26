@@ -20,10 +20,18 @@ export async function POST(request: Request) {
   const label = body.label === "business" ? "business" : body.label === "personal" ? "personal" : null;
   if (!body.account_id || !label) return Response.json({ error: "bad_request" }, { status: 400 });
 
+  // Moving an account to Personal makes its spending non-deductible right away.
+  // Moving to Oprinte only re-owns it; categorization/deductibility is applied on
+  // the next sync (which knows each transaction's Plaid category).
+  const patch: { account: string; cat?: string; ded?: boolean } = { account: label };
+  if (label === "personal") {
+    patch.cat = "personal";
+    patch.ded = false;
+  }
   await supabase.from("plaid_accounts").update({ label }).eq("user_id", user.id).eq("account_id", body.account_id);
   await supabase
     .from("txns")
-    .update({ account: label })
+    .update(patch)
     .eq("user_id", user.id)
     .eq("source", "plaid")
     .eq("plaid_account", body.account_id);

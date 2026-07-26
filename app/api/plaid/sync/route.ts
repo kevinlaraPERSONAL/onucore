@@ -16,6 +16,33 @@ const FREQ: Record<string, string> = {
   UNKNOWN: "monthly",
 };
 
+// Maps a Plaid transaction's category to an onucore Schedule C category.
+// Unknown / clearly-personal categories fall back to "personal" (not deductible)
+// so we under-claim rather than over-claim.
+function plaidCat(t: { personal_finance_category?: { primary?: string; detailed?: string | null } | null }): string {
+  const p = t.personal_finance_category?.primary || "";
+  const d = t.personal_finance_category?.detailed || "";
+  if (d.includes("SUBSCRIPTION") || d.includes("SOFTWARE")) return "software";
+  switch (p) {
+    case "FOOD_AND_DRINK":
+      return "food";
+    case "TRANSPORTATION":
+      return "gas";
+    case "TRAVEL":
+      return "travel";
+    case "RENT_AND_UTILITIES":
+      return "phone";
+    case "GENERAL_SERVICES":
+      return "pro";
+    case "GENERAL_MERCHANDISE":
+    case "HOME_IMPROVEMENT":
+    case "BANK_FEES":
+      return "office";
+    default:
+      return "personal";
+  }
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Retry a Plaid call while it reports PRODUCT_NOT_READY (data still preparing).
@@ -97,28 +124,76 @@ export async function POST() {
       );
       const rows = (tx.data.transactions || [])
         .filter((t) => !t.pending)
-        .map((t) => ({
-          user_id: user.id,
-          kind: t.amount > 0 ? "expense" : "income",
-          amount: Math.abs(t.amount),
-          cat: t.amount > 0 ? "personal" : "other_income",
-          account: accMap.get(t.account_id) || it.label || "personal",
-          date_iso: t.date,
-          note: t.merchant_name || t.name || "",
-          ded: false,
-          source: "plaid",
-          plaid_id: t.transaction_id,
-          plaid_account: t.account_id,
-        }));
+        .map((t) => {
+          const acctLabel = accMap.get(t.account_id) || it.label || "personal";
+          const isExpense = t.amount > 0;
+          const isBiz = acctLabel === "business";
+          // Business-account expenses are deductible business expenses, categorized
+          // by Plaid; personal-account spending stays personal / non-deductible.
+          const cat = !isExpense ? "other_income" : isBiz ? plaidCat(t) : "personal";
+          return {
+            user_id: user.id,
+            kind: isExpense ? "expense" : "income",
+            amount: Math.abs(t.amount),
+            cat,
+            account: acctLabel,
+            date_iso: t.date,
+            note: t.merchant_name || t.name || "",
+            ded: isExpense && isBiz && cat !== "personal",
+            source: "plaid",
+            plaid_id: t.transaction_id,
+            plaid_account: t.account_id,
+          };
+        });
       if (rows.length) {
         const ids = rows.map((r) => r.plaid_id);
-        const { data: existing } = await supabase.from("txns").select("plaid_id").eq("user_id", user.id).in("plaid_id", ids);
+        const { data: existing } = await supabase
+          .from("txns")
+          .select("plaid_id, cat, ded, plaid_account")
+          .eq("user_id", user.id)
+          .in("plaid_id", ids);
         const have = new Set((existing || []).map((x: { plaid_id: string }) => x.plaid_id));
+        // "Pristine" imported rows (still Personal / non-deductible — untouched by
+        // categorization or by the user) may be re-categorized with the account tags.
+        const pristine = new Set(
+          (existing || [])
+            .filter((x: { cat?: string; ded?: boolean }) => x.cat === "personal" && x.ded === false)
+            .map((x: { plaid_id: string }) => x.plaid_id),
+        );
+        const noAcct = new Set(
+          (existing || [])
+            .filter((x: { plaid_account?: string | null }) => !x.plaid_account)
+            .map((x: { plaid_id: string }) => x.plaid_id),
+        );
+
         const fresh = rows.filter((r) => !have.has(r.plaid_id));
         if (fresh.length) {
           const ins = await supabase.from("txns").insert(fresh);
           if (ins.error) errors.push("ins:" + ins.error.message);
           else txnsAdded += fresh.length;
+        }
+
+        // Bulk-update the legacy rows, grouped by (account, cat, ded).
+        const groups = new Map<string, { account: string; cat: string; ded: boolean; account_id: string; ids: string[] }>();
+        for (const r of rows) {
+          if (!pristine.has(r.plaid_id)) continue;
+          // skip rows already settled (personal + already carrying their account tag)
+          if (r.cat === "personal" && r.ded === false && !noAcct.has(r.plaid_id)) continue;
+          const key = `${r.plaid_account}|${r.cat}|${r.ded}`;
+          let g = groups.get(key);
+          if (!g) {
+            g = { account: r.account, cat: r.cat, ded: r.ded, account_id: r.plaid_account, ids: [] };
+            groups.set(key, g);
+          }
+          g.ids.push(r.plaid_id);
+        }
+        for (const g of groups.values()) {
+          const up = await supabase
+            .from("txns")
+            .update({ account: g.account, cat: g.cat, ded: g.ded, plaid_account: g.account_id })
+            .eq("user_id", user.id)
+            .in("plaid_id", g.ids);
+          if (up.error) errors.push("fix:" + up.error.message);
         }
       }
     } catch (e) {

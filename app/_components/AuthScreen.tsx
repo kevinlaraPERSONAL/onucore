@@ -125,9 +125,11 @@ export default function AuthScreen() {
 
       <div style={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}><OcIcon size={56} ring="#8a9095" dot={C.red} /></div>
-          <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "0.14em" }}>
-            onucore<span style={{ color: C.red, fontSize: 13, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <OcIcon size={44} ring="#8a9095" dot={C.red} />
+            <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "0.14em" }}>
+              onucore<span style={{ color: C.red, fontSize: 13, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
+            </div>
           </div>
           <div style={{ fontSize: 13.5, color: C.dim, marginTop: 8 }}>{tr.tagline}</div>
         </div>

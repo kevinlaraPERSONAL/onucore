@@ -16,9 +16,11 @@ function LoadingScreen() {
     <div style={{ minHeight: "100vh", background: "#1A1A1F", color: "#ECEBE7", fontFamily: SF, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden" }}>
       <style>{`@keyframes ocSpin{to{transform:rotate(360deg);}}@keyframes ocPulse{0%,100%{opacity:.6;}50%{opacity:1;}}@keyframes ocGlow{0%,100%{opacity:.4;transform:scale(.9);}50%{opacity:.85;transform:scale(1.06);}}`}</style>
       <div aria-hidden style={{ position: "absolute", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(229,72,77,.26), rgba(229,72,77,.06) 45%, transparent 70%)", animation: "ocGlow 2.8s ease-in-out infinite" }} />
-      <div style={{ zIndex: 1, display: "flex", animation: "ocPulse 2.6s ease-in-out infinite" }}><OcIcon size={70} ring="#8a9095" dot="#e5484d" /></div>
-      <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "0.14em", zIndex: 1, marginTop: 18 }}>
-        onucore<span style={{ color: "#e5484d", fontSize: 10, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
+      <div style={{ zIndex: 1, display: "flex", alignItems: "center", gap: 12, animation: "ocPulse 2.6s ease-in-out infinite" }}>
+        <OcIcon size={46} ring="#8a9095" dot="#e5484d" />
+        <div style={{ fontSize: 28, fontWeight: 600, letterSpacing: "0.14em" }}>
+          onucore<span style={{ color: "#e5484d", fontSize: 12, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
+        </div>
       </div>
       <div aria-hidden style={{ marginTop: 22, width: 26, height: 26, borderRadius: "50%", border: "3px solid rgba(229,72,77,.18)", borderTopColor: "#e5484d", animation: "ocSpin .8s linear infinite", zIndex: 1 }} />
     </div>

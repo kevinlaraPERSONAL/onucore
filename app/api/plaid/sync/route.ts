@@ -1,4 +1,5 @@
 import { plaidClient } from "@/lib/plaid";
+import type { Transaction } from "plaid";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 
 // Pulls the connected bank(s): recurring charges → subscriptions, and recent
@@ -41,6 +42,13 @@ function plaidCat(t: { personal_finance_category?: { primary?: string; detailed?
     default:
       return "personal";
   }
+}
+
+// Transfers between the user's own accounts, credit-card payments and loan
+// payments are NOT income/expenses — exclude them so the report isn't inflated.
+function isTransfer(t: { personal_finance_category?: { primary?: string } | null }): boolean {
+  const p = t.personal_finance_category?.primary || "";
+  return p === "TRANSFER_IN" || p === "TRANSFER_OUT" || p === "LOAN_PAYMENTS";
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -110,20 +118,30 @@ export async function POST() {
       errors.push("acc:" + ((e as { message?: string })?.message || "err"));
     }
 
-    // recent transactions → income / expenses
+    // transactions → income / expenses (full fiscal year, paginated)
     try {
       const end = new Date().toISOString().slice(0, 10);
-      const start = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
-      const tx = await ready(() =>
-        client.transactionsGet({
-          access_token: it.access_token,
-          start_date: start,
-          end_date: end,
-          options: { count: 250, offset: 0 },
-        }),
-      );
-      const rows = (tx.data.transactions || [])
-        .filter((t) => !t.pending)
+      const start = `${new Date().getFullYear() - 1}-01-01`;
+      const allTx: Transaction[] = [];
+      let offset = 0;
+      let total = Infinity;
+      while (offset < total && offset < 5000) {
+        const tx = await ready(() =>
+          client.transactionsGet({
+            access_token: it.access_token,
+            start_date: start,
+            end_date: end,
+            options: { count: 500, offset },
+          }),
+        );
+        total = tx.data.total_transactions ?? (tx.data.transactions || []).length;
+        const batch = tx.data.transactions || [];
+        allTx.push(...batch);
+        if (batch.length === 0) break;
+        offset += batch.length;
+      }
+      const rows = allTx
+        .filter((t) => !t.pending && !isTransfer(t))
         .map((t) => {
           const acctLabel = accMap.get(t.account_id) || it.label || "personal";
           const isExpense = t.amount > 0;

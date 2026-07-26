@@ -47,7 +47,7 @@ const AREAS = {
   personal: { en: "Personal", es: "Personal", color: "#8a8b93" }, health: { en: "Health", es: "Salud", color: "#8a8b93" },
 };
 const CATS = [
-  { k: "gas", en: "Gas & Vehicle", es: "Gasolina y auto", color: "#8a8b93", line: "Car & truck (L9)", ded: "partial", n_en: "Business miles only — 72.5¢/mi (2026). Commuting isn't deductible.", n_es: "Solo millas de negocio — 72.5¢/mi (2026). El traslado casa–oficina no deduce." },
+  { k: "gas", en: "Gas & Vehicle", es: "Gasolina y auto", color: "#8a8b93", line: "Car & truck (L9)", ded: "partial", n_en: "Business miles only — 70¢/mi (2026). Commuting isn't deductible.", n_es: "Solo millas de negocio — 70¢/mi (2026). El traslado casa–oficina no deduce." },
   { k: "food", en: "Meals", es: "Comida", color: "#8a8b93", line: "Meals (L24b)", ded: "meals50", n_en: "Business meals only — 50% deductible.", n_es: "Solo comidas de negocio — 50% deducible." },
   { k: "tech", en: "Technology & Equipment", es: "Tecnología y equipo", color: "#8a8b93", line: "Depreciation / Supplies", ded: "full", n_en: "Business equipment — 100% bonus depreciation (2026).", n_es: "Equipo de negocio — depreciación bonus 100% (2026)." },
   { k: "travel", en: "Travel", es: "Viajes", color: "#8a8b93", line: "Travel (L24a)", ded: "full" },
@@ -90,7 +90,7 @@ const STR = {
     ask_label: "Ask onucore", ask_ph: "Ask onucore anything about your life…", ask_thinking: "Thinking…",
     alerts_label: "Heads up",
     tax_label: "Taxes", tax_setaside: "Set aside for taxes", tax_quarterly: "Quarterly estimate", tax_net: "Est. net (income − deductible)", tax_disc: "Rough estimate — not tax advice. Confirm with your accountant.",
-    f_miles: "Miles (×$0.725/mi)",
+    f_miles: "Miles (×$0.70/mi)",
     prof_title: "You & settings", sec_profile: "Profile", sec_about: "About you", sec_conn: "Connections", sec_settings: "Settings",
     f_name: "Name", f_role: "What you do", f_business: "Business / brand", f_tone: "How should onucore talk to you?", tone_casual: "Casual", tone_formal: "Formal",
     f_hobbies: "Interests & hobbies", f_people: "Key people", f_goals: "What should onucore help with?", f_wake: "Wake time", f_work: "Work hours", f_briefing: "Briefing time",
@@ -127,7 +127,7 @@ const STR = {
     ask_label: "Pregúntale a onucore", ask_ph: "Pregúntale a onucore sobre tu vida…", ask_thinking: "Pensando…",
     alerts_label: "Atención",
     tax_label: "Impuestos", tax_setaside: "Aparta para impuestos", tax_quarterly: "Estimado trimestral", tax_net: "Neto est. (ingresos − deducible)", tax_disc: "Estimado aproximado — no es asesoría fiscal. Confirma con tu contador.",
-    f_miles: "Millas (×$0.725/mi)",
+    f_miles: "Millas (×$0.70/mi)",
     prof_title: "Tú y ajustes", sec_profile: "Perfil", sec_about: "Sobre ti", sec_conn: "Conexiones", sec_settings: "Ajustes",
     f_name: "Nombre", f_role: "A qué te dedicas", f_business: "Negocio / marca", f_tone: "¿Cómo te habla onucore?", tone_casual: "Cercano", tone_formal: "Formal",
     f_hobbies: "Intereses y hobbies", f_people: "Personas clave", f_goals: "¿En qué quieres que onucore te ayude?", f_wake: "Hora de despertar", f_work: "Horario laboral", f_briefing: "Hora del briefing",
@@ -153,8 +153,13 @@ const areaColor = (a) => (AREAS[a] ? AREAS[a].color : C.mute);
 const catBy = (k) => CATS.find((c) => c.k === k) || CATS[CATS.length - 1];
 const incBy = (k) => INCOME.find((c) => c.k === k) || INCOME[0];
 const acctBy = (k) => ACCOUNTS.find((a) => a.k === k) || ACCOUNTS[0];
-const dpct = (ded) => (ded === "meals50" ? 0.5 : ded === "none" ? 0 : 1);
-const dedAmount = (tx) => (tx.kind !== "expense" || tx.ded === false ? 0 : tx.amount * dpct(catBy(tx.cat).ded));
+const dpct = (ded) => (ded === "meals50" ? 0.5 : ded === "partial" ? 0.5 : ded === "none" ? 0 : 1);
+const dedAmount = (tx) => {
+  if (tx.kind !== "expense" || tx.ded === false) return 0;
+  // Vehicle: only logged business miles deduct (standard mileage method); raw gas receipts don't.
+  if (tx.cat === "gas") return tx.miles ? Number(tx.amount) || 0 : 0;
+  return (Number(tx.amount) || 0) * dpct(catBy(tx.cat).ded);
+};
 const pad = (n) => String(n).padStart(2, "0");
 const toISO = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 function parseT(s) { if (!s) return 9999; const m = s.match(/(\d+):?(\d+)?\s*(AM|PM)?/i); if (!m) return 9999; let h = +m[1]; const mi = +(m[2] || 0); const ap = (m[3] || "").toUpperCase(); if (ap === "PM" && h !== 12) h += 12; if (ap === "AM" && h === 12) h = 0; return h * 60 + mi; }
@@ -225,6 +230,7 @@ export default function AtlasAI() {
   const [review, setReview] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [reportYear, setReportYear] = useState(YEAR);
   // calendar
   const now0 = new Date();
   const [calY, setCalY] = useState(now0.getFullYear());
@@ -1020,7 +1026,7 @@ ${JSON.stringify(snapshot)}`;
           <FieldLabel>{t.f_cat}</FieldLabel>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{(txnDraft.kind === "income" ? INCOME : CATS).map((c) => <Chip key={c.k} label={c[lang === "es" ? "es" : "en"]} color={c.color} on={txnDraft.cat === c.k} onClick={() => setTxnDraft({ ...txnDraft, cat: c.k, ded: txnDraft.kind === "expense" ? catBy(c.k).ded !== "none" : false })} />)}</div>
           {txnDraft.kind === "expense" && (() => { const c = catBy(txnDraft.cat); const nt = c[lang === "es" ? "n_es" : "n_en"]; return nt ? <div style={{ fontSize: 11.5, color: C.dim, marginTop: 10, lineHeight: 1.45 }}>ⓘ {nt}</div> : null; })()}
-          {txnDraft.kind === "expense" && txnDraft.cat === "gas" && (<><FieldLabel>{t.f_miles}</FieldLabel><input className="ph" type="number" inputMode="decimal" value={txnDraft.miles || ""} onChange={(e) => { const mi = e.target.value; setTxnDraft({ ...txnDraft, miles: mi, amount: mi ? (parseFloat(mi) * 0.725).toFixed(2) : txnDraft.amount }); }} placeholder="0" style={{ ...inputS, marginTop: 0 }} /></>)}
+          {txnDraft.kind === "expense" && txnDraft.cat === "gas" && (<><FieldLabel>{t.f_miles}</FieldLabel><input className="ph" type="number" inputMode="decimal" value={txnDraft.miles || ""} onChange={(e) => { const mi = e.target.value; setTxnDraft({ ...txnDraft, miles: mi, amount: mi ? (parseFloat(mi) * 0.70).toFixed(2) : txnDraft.amount }); }} placeholder="0" style={{ ...inputS, marginTop: 0 }} /></>)}
           <FieldLabel>{t.f_acct}</FieldLabel>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{ACCOUNTS.map((a) => <Chip key={a.k} label={a.label} color={C.gold} on={txnDraft.account === a.k} onClick={() => setTxnDraft({ ...txnDraft, account: a.k })} />)}</div>
           <FieldLabel>{t.f_date}</FieldLabel><input type="date" value={txnDraft.dateISO} onChange={(e) => setTxnDraft({ ...txnDraft, dateISO: e.target.value })} style={{ ...inputS, marginTop: 0, colorScheme: "dark" }} />
@@ -1117,7 +1123,7 @@ ${JSON.stringify(snapshot)}`;
       {reportOpen && (
         <Sheet onClose={() => setReportOpen(false)}>
           {(() => {
-            const yT = txns.filter((x) => new Date(x.dateISO).getFullYear() === YEAR);
+            const yT = txns.filter((x) => new Date(x.dateISO).getFullYear() === reportYear);
             const isBiz = (x) => x.account === "business";
             const sumK = (arr, k) => arr.filter((x) => x.kind === k).reduce((s, x) => s + x.amount, 0);
             const bizInc = sumK(yT.filter(isBiz), "income");
@@ -1125,19 +1131,20 @@ ${JSON.stringify(snapshot)}`;
             const yDed = yT.reduce((s, x) => s + dedAmount(x), 0);
             const netBiz = bizInc - yDed;
             const lines = (() => { const m = {}; yT.filter((x) => x.kind === "expense").forEach((x) => { const d = dedAmount(x); if (d <= 0) return; const ln = catBy(x.cat).line; m[ln] = (m[ln] || 0) + d; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
-            const yearForms = taxForms.filter((f) => f.year === YEAR);
+            const yearForms = taxForms.filter((f) => f.year === reportYear);
             const w2 = yearForms.filter((f) => f.kind === "W-2");
             const w2Wages = w2.reduce((s, f) => s + (Number(f.amount) || 0), 0);
             const w2Withheld = w2.reduce((s, f) => s + (Number(f.withheld) || 0), 0);
-            const exportCSV = () => { const head = ["Date", "Type", "Category", "Schedule C", "Account", "Note", "Amount", "Deductible"]; const rows = yT.slice().sort((a, b) => a.dateISO.localeCompare(b.dateISO)).map((x) => [x.dateISO, x.kind, (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], x.kind === "expense" ? catBy(x.cat).line : "Income", acctBy(x.account).label, (x.note || "").replace(/"/g, "'"), x.amount.toFixed(2), dedAmount(x).toFixed(2)]); const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n"); try { const b = new Blob([csv], { type: "text/csv" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = `onucore-finance-${YEAR}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
+            const exportCSV = () => { const head = ["Date", "Type", "Category", "Schedule C", "Account", "Note", "Amount", "Deductible", "Miles"]; const rows = yT.slice().sort((a, b) => a.dateISO.localeCompare(b.dateISO)).map((x) => [x.dateISO, x.kind, (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], x.kind === "expense" ? catBy(x.cat).line : "Income", x.account === "personal" ? "Empleado" : x.account === "business" ? "Contratista" : acctBy(x.account).label, (x.note || "").replace(/"/g, "'"), x.amount.toFixed(2), dedAmount(x).toFixed(2), x.miles || ""]); const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n"); try { const b = new Blob([csv], { type: "text/csv" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = `onucore-finance-${reportYear}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
             const shareReport = async () => {
-              const title = t.rep_title.replace("{y}", YEAR);
-              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_wages}: ${money(w2Wages, loc)}`, `${t.form_withheld}: ${money(w2Withheld, loc)}`, "", ...(yearForms.length ? [t.rep_forms.replace("{y}", YEAR), ...yearForms.map((f) => `• ${f.kind}${f.payer ? " · " + f.payer : ""}: ${money(Number(f.amount) || 0, loc)}`), ""] : []), t.rep_disc].join("\n");
+              const title = t.rep_title.replace("{y}", reportYear);
+              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_wages}: ${money(w2Wages, loc)}`, `${t.form_withheld}: ${money(w2Withheld, loc)}`, "", ...(yearForms.length ? [t.rep_forms.replace("{y}", reportYear), ...yearForms.map((f) => `• ${f.kind}${f.payer ? " · " + f.payer : ""}: ${money(Number(f.amount) || 0, loc)}`), ""] : []), t.rep_disc].join("\n");
               try { if (navigator.share) { await navigator.share({ title, text: body }); return; } throw 0; }
               catch (e) { if (e && e.name === "AbortError") return; try { await navigator.clipboard.writeText(body); setToast({ kind: "ok", text: t.rep_copied }); } catch {} }
             };
             return (<>
-              <div style={{ fontSize: 17, fontWeight: 600 }}>{t.rep_title.replace("{y}", YEAR)}</div>
+              <div style={{ fontSize: 17, fontWeight: 600 }}>{t.rep_title.replace("{y}", reportYear)}</div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>{[YEAR, YEAR - 1, YEAR - 2].map((y) => (<button key={y} onClick={() => setReportYear(y)} style={{ padding: "7px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, fontWeight: 600, border: `1px solid ${reportYear === y ? C.gold : C.border}`, background: reportYear === y ? "rgba(229,72,77,.12)" : "transparent", color: reportYear === y ? C.gold : C.dim }}>{y}</button>))}</div>
               <FieldLabel>{t.rep_biz}</FieldLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_biz_income} value={money(bizInc, loc)} color={C.green} /><Sum label={t.rep_biz_expenses} value={money(bizExp, loc)} color={C.red} /></div>
               <div style={{ background: C.surface2, border: `1px solid ${C.goldSoft}`, borderRadius: 14, padding: "14px 16px", marginTop: 10 }}><div style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.gold }}>{t.rep_ded}</div><div className="num" style={{ fontSize: 28, fontWeight: 300, color: C.gold, marginTop: 4 }}>{money(yDed, loc)}</div></div>
@@ -1147,7 +1154,7 @@ ${JSON.stringify(snapshot)}`;
               <FieldLabel>{t.rep_personal}</FieldLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_wages} value={money(w2Wages, loc)} color={C.dim} /><Sum label={t.form_withheld} value={money(w2Withheld, loc)} color={C.dim} /></div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>{t.rep_pers_note}</div>
-              <FieldLabel>{t.rep_forms.replace("{y}", YEAR)}</FieldLabel>
+              <FieldLabel>{t.rep_forms.replace("{y}", reportYear)}</FieldLabel>
               <div style={cardS}>{yearForms.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_forms}</div>) : yearForms.map((f) => (<div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><div style={{ minWidth: 0 }}><div>{f.kind}{f.payer ? ` · ${f.payer}` : ""}</div>{Number(f.withheld) > 0 ? (<div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>{t.form_withheld}: {money(Number(f.withheld) || 0, loc)}</div>) : null}</div><div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}><span className="num">{money(Number(f.amount) || 0, loc)}</span><button onClick={() => deleteTaxForm(f.id)} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", fontSize: 17, lineHeight: 1, fontFamily: SF }}>×</button></div></div>))}</div>
               <button onClick={() => setFormDraft({ kind: "1099-NEC", payer: "Aequalend", amount: "", withheld: "", year: YEAR })} style={{ ...btnGhost, width: "100%", marginTop: 8, fontSize: 13.5 }}>+ {t.rep_forms_add}</button>
               <FieldLabel>{t.rep_docs}</FieldLabel>

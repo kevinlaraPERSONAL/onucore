@@ -51,13 +51,14 @@ function txnToRow(tx: Any, userId: string) {
     date_iso: orNull(tx.dateISO) ?? new Date().toISOString().slice(0, 10),
     note: tx.note ?? "",
     ded: !!tx.ded,
+    miles: tx.miles != null && tx.miles !== "" ? Number(tx.miles) : null,
     source: tx.source ?? "app",
   };
 }
 function txnFromRow(r: Any) {
   return {
     id: r.id, kind: r.kind, amount: Number(r.amount), cat: r.cat, account: r.account ?? "",
-    dateISO: r.date_iso, note: r.note ?? "", ded: !!r.ded, source: r.source ?? "app",
+    dateISO: r.date_iso, note: r.note ?? "", ded: !!r.ded, miles: r.miles ?? null, source: r.source ?? "app",
   };
 }
 

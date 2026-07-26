@@ -166,6 +166,12 @@ function parseT(s) { if (!s) return 9999; const m = s.match(/(\d+):?(\d+)?\s*(AM
 function fmtDate(iso, lang) { return new Date(iso + "T00:00:00").toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { weekday: "short", day: "numeric", month: "short" }); }
 // Given a reference charge date + billing cycle, roll forward to the next
 // renewal that is today or later (Plaid gives us the LAST charge date).
+function addMonthsISO(iso, m) { if (!iso) return iso; const d = new Date(iso + "T00:00:00"); if (isNaN(d.getTime())) return iso; d.setMonth(d.getMonth() + m); return d.toISOString().slice(0, 10); }
+function oilAdvice(vehicle, es) {
+  const make = ((vehicle && vehicle.make) || "").toLowerCase();
+  if (make.includes("bmw")) return es ? "BMW: aceite sintético 5W-30 con aprobación BMW Longlife-01 (LL-01), ~5 L. Cámbialo cada ~7,500 mi o 1 año, lo que llegue primero. Confirma con tu manual o VIN." : "BMW: full synthetic 5W-30, BMW Longlife-01 (LL-01) approval, ~5 qt. Every ~7,500 mi or 1 yr. Confirm with your manual/VIN.";
+  return es ? "Aceite sintético según tu manual. Cámbialo cada ~7,500 mi o 1 año." : "Synthetic oil per your manual. Every ~7,500 mi or 1 yr.";
+}
 function nextRenewal(iso, cycle) {
   if (!iso) return iso;
   const d = new Date(iso + "T00:00:00");
@@ -745,7 +751,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
-          {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO() }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
+          {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
         </div>
       </div>
@@ -1082,6 +1088,7 @@ ${JSON.stringify(snapshot)}`;
           <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Servicio / recordatorio" : "Service / reminder"}</div>
           <FieldLabel>{lang === "es" ? "Tipo" : "Type"}</FieldLabel>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["oil", lang === "es" ? "Aceite" : "Oil"], ["registration", lang === "es" ? "Placas" : "Registration"], ["insurance", lang === "es" ? "Seguro" : "Insurance"], ["tires", lang === "es" ? "Llantas" : "Tires"], ["brakes", lang === "es" ? "Frenos" : "Brakes"], ["inspection", lang === "es" ? "Inspección" : "Inspection"], ["service", lang === "es" ? "Servicio" : "Service"], ["note", lang === "es" ? "Nota" : "Note"]].map(([k, lbl]) => (<button key={k} type="button" onClick={() => setCarDraft((d) => ({ ...d, kind: k }))} style={{ padding: "8px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${carDraft.kind === k ? C.gold : C.border}`, background: carDraft.kind === k ? "rgba(229,72,77,.12)" : "transparent", color: carDraft.kind === k ? C.gold : C.dim }}>{lbl}</button>))}</div>
+          {carDraft.kind === "oil" ? <div style={{ fontSize: 12, color: C.gold, background: "rgba(205,176,121,.08)", border: `1px solid ${C.goldSoft}`, borderRadius: 10, padding: "10px 12px", marginTop: 10, lineHeight: 1.5 }}>🛢 {oilAdvice(vehicle, lang === "es")}</div> : null}
           <FieldLabel>{lang === "es" ? "Título (opcional)" : "Title (optional)"}</FieldLabel>
           <input value={carDraft.title || ""} onChange={(e) => setCarDraft((d) => ({ ...d, title: e.target.value }))} placeholder={lang === "es" ? "Ej. Cambio de aceite sintético" : "e.g. Synthetic oil change"} style={obIn} />
           <div style={{ display: "flex", gap: 10 }}>

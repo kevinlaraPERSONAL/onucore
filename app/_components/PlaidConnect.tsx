@@ -59,9 +59,13 @@ export default function PlaidConnect({
       const r = await fetch("/api/plaid/link-token", { method: "POST" });
       const d = await r.json();
       if (d.link_token) setToken(d.link_token);
-      else setBusy(false);
-    } catch {
+      else {
+        setBusy(false);
+        if (typeof window !== "undefined") window.alert("Plaid: " + (d.error || JSON.stringify(d)));
+      }
+    } catch (e) {
       setBusy(false);
+      if (typeof window !== "undefined") window.alert("Plaid error: " + String(e));
     }
   };
 

@@ -3,7 +3,7 @@
 export default function OcIcon({
   size = 48,
   ring = "#5c6265",
-  dot = "#b12f3d",
+  dot = "#e5484d",
   style,
 }: {
   size?: number;

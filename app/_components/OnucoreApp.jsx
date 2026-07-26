@@ -68,7 +68,7 @@ const ACCOUNTS = [{ k: "amex", label: "Amex", type: "credit" }, { k: "visa", lab
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -105,7 +105,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -239,6 +239,10 @@ export default function AtlasAI() {
   const docFileRef = useRef(null);
   const [taxForms, setTaxForms] = useState([]);
   const [formDraft, setFormDraft] = useState(null);
+  const [vehicle, setVehicle] = useState(null);
+  const [carRecords, setCarRecords] = useState([]);
+  const [vehDraft, setVehDraft] = useState(null);
+  const [carDraft, setCarDraft] = useState(null);
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
@@ -261,6 +265,8 @@ export default function AtlasAI() {
         if (d.profile) setProfile((p) => ({ ...p, ...d.profile }));
         const dd = await supabase.from("documents").select("*").order("created_at", { ascending: false }); if (alive && dd.data) setDocs(dd.data);
         const tf = await supabase.from("tax_forms").select("*").order("created_at", { ascending: false }); if (alive && tf.data) setTaxForms(tf.data);
+        const vv = await supabase.from("vehicles").select("*").order("created_at").limit(1); if (alive && vv.data) setVehicle(vv.data[0] || null);
+        const cr = await supabase.from("car_records").select("*").order("created_at", { ascending: false }); if (alive && cr.data) setCarRecords(cr.data);
       } catch { /* noop */ }
     })();
     return () => { alive = false; };
@@ -430,6 +436,29 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     setFormDraft(null); refreshForms(); setToast({ kind: "ok", text: lang === "es" ? "Forma guardada" : "Form saved" });
   };
   const deleteTaxForm = async (id) => { await supabase.from("tax_forms").delete().eq("id", id); refreshForms(); };
+  const refreshCar = async () => {
+    const vv = await supabase.from("vehicles").select("*").order("created_at").limit(1); setVehicle((vv.data && vv.data[0]) || null);
+    const cr = await supabase.from("car_records").select("*").order("created_at", { ascending: false }); setCarRecords(cr.data || []);
+  };
+  const saveVehicle = async () => {
+    if (!vehDraft) return;
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id); if (!uid2) return;
+    const row = { user_id: uid2, make: (vehDraft.make || "").trim() || null, model: (vehDraft.model || "").trim() || null, year: vehDraft.year ? Number(vehDraft.year) : null, plate: (vehDraft.plate || "").trim() || null, vin: (vehDraft.vin || "").trim() || null, color: (vehDraft.color || "").trim() || null, mileage: vehDraft.mileage ? Number(vehDraft.mileage) : null, insurance_company: (vehDraft.insurance_company || "").trim() || null, insurance_policy: (vehDraft.insurance_policy || "").trim() || null, insurance_expiry: vehDraft.insurance_expiry || null };
+    if (vehDraft.id) await supabase.from("vehicles").update(row).eq("id", vehDraft.id);
+    else await supabase.from("vehicles").insert(row);
+    setVehDraft(null); refreshCar(); setToast({ kind: "ok", text: lang === "es" ? "Carro guardado" : "Car saved" });
+  };
+  const saveCarRecord = async () => {
+    if (!carDraft) return;
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id); if (!uid2) return;
+    const row = { user_id: uid2, kind: carDraft.kind || "service", title: (carDraft.title || "").trim() || null, date_iso: carDraft.date_iso || null, due_iso: carDraft.due_iso || null, mileage: carDraft.mileage ? Number(carDraft.mileage) : null, due_mileage: carDraft.due_mileage ? Number(carDraft.due_mileage) : null, cost: carDraft.cost ? Number(carDraft.cost) : null, note: (carDraft.note || "").trim() || null };
+    if (carDraft.id) await supabase.from("car_records").update(row).eq("id", carDraft.id);
+    else await supabase.from("car_records").insert(row);
+    setCarDraft(null); refreshCar();
+  };
+  const deleteCarRecord = async (id) => { await supabase.from("car_records").delete().eq("id", id); refreshCar(); };
   const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertTxn(supabase, x); setTxnDraft(null); };
   const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); db.deleteTxn(supabase, id); setTxnDraft(null); };
   function scanReceipt(e) {
@@ -682,7 +711,7 @@ ${JSON.stringify(snapshot)}`;
         <aside style={{ position: "fixed", left: 0, top: 0, width: 220, height: "100vh", background: C.surface, borderRight: `1px solid ${C.borderSoft}`, padding: "22px 14px 18px", display: "flex", flexDirection: "column", gap: 5, zIndex: 25, boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px 16px" }}><OcIcon size={26} ring="#8a9095" dot={C.red} /><span style={{ color: C.red, fontSize: 16, fontWeight: 700, letterSpacing: "0.18em" }}>AI</span></div>
           <button onClick={() => setTab("capture")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 12, border: "none", background: C.red, color: "#ffffff", cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}><PlusI /> {lang === "es" ? "Capturar" : "Capture"}</button>
-          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
+          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
         </aside>
       )}
       <div style={{ maxWidth: contentMax, marginLeft: desktop ? `max(220px, calc(220px + (100% - ${contentMax + 220}px) / 2))` : "auto", marginRight: "auto", minHeight: "100vh", position: "relative", paddingBottom: desktop ? 40 : 86 }}>
@@ -710,6 +739,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
+          {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO() }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
         </div>
       </div>
@@ -1019,10 +1049,56 @@ ${JSON.stringify(snapshot)}`;
         </Sheet>
       )}
 
+      {vehDraft && (
+        <Sheet onClose={() => setVehDraft(null)}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Mi carro" : "My car"}</div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Marca" : "Make"}</FieldLabel><input value={vehDraft.make || ""} onChange={(e) => setVehDraft((d) => ({ ...d, make: e.target.value }))} style={obIn} /></div>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Modelo" : "Model"}</FieldLabel><input value={vehDraft.model || ""} onChange={(e) => setVehDraft((d) => ({ ...d, model: e.target.value }))} style={obIn} /></div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Año" : "Year"}</FieldLabel><input value={vehDraft.year || ""} onChange={(e) => setVehDraft((d) => ({ ...d, year: e.target.value }))} inputMode="numeric" style={obIn} /></div>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Millaje" : "Mileage"}</FieldLabel><input value={vehDraft.mileage || ""} onChange={(e) => setVehDraft((d) => ({ ...d, mileage: e.target.value }))} inputMode="numeric" style={obIn} /></div>
+          </div>
+          <FieldLabel>{lang === "es" ? "Placa" : "Plate"}</FieldLabel>
+          <input value={vehDraft.plate || ""} onChange={(e) => setVehDraft((d) => ({ ...d, plate: e.target.value }))} style={obIn} />
+          <FieldLabel>VIN</FieldLabel>
+          <input value={vehDraft.vin || ""} onChange={(e) => setVehDraft((d) => ({ ...d, vin: e.target.value }))} style={obIn} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Aseguradora" : "Insurer"}</FieldLabel><input value={vehDraft.insurance_company || ""} onChange={(e) => setVehDraft((d) => ({ ...d, insurance_company: e.target.value }))} style={obIn} /></div>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Vence seguro" : "Ins. expires"}</FieldLabel><input type="date" value={vehDraft.insurance_expiry || ""} onChange={(e) => setVehDraft((d) => ({ ...d, insurance_expiry: e.target.value }))} style={{ ...obIn, colorScheme: "dark" }} /></div>
+          </div>
+          <button onClick={saveVehicle} style={{ ...btnGold, width: "100%", marginTop: 22 }}>{t.save}</button>
+        </Sheet>
+      )}
+      {carDraft && (
+        <Sheet onClose={() => setCarDraft(null)}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Servicio / recordatorio" : "Service / reminder"}</div>
+          <FieldLabel>{lang === "es" ? "Tipo" : "Type"}</FieldLabel>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["oil", lang === "es" ? "Aceite" : "Oil"], ["registration", lang === "es" ? "Placas" : "Registration"], ["insurance", lang === "es" ? "Seguro" : "Insurance"], ["tires", lang === "es" ? "Llantas" : "Tires"], ["brakes", lang === "es" ? "Frenos" : "Brakes"], ["inspection", lang === "es" ? "Inspección" : "Inspection"], ["service", lang === "es" ? "Servicio" : "Service"], ["note", lang === "es" ? "Nota" : "Note"]].map(([k, lbl]) => (<button key={k} type="button" onClick={() => setCarDraft((d) => ({ ...d, kind: k }))} style={{ padding: "8px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${carDraft.kind === k ? C.gold : C.border}`, background: carDraft.kind === k ? "rgba(229,72,77,.12)" : "transparent", color: carDraft.kind === k ? C.gold : C.dim }}>{lbl}</button>))}</div>
+          <FieldLabel>{lang === "es" ? "Título (opcional)" : "Title (optional)"}</FieldLabel>
+          <input value={carDraft.title || ""} onChange={(e) => setCarDraft((d) => ({ ...d, title: e.target.value }))} placeholder={lang === "es" ? "Ej. Cambio de aceite sintético" : "e.g. Synthetic oil change"} style={obIn} />
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Fecha" : "Date"}</FieldLabel><input type="date" value={carDraft.date_iso || ""} onChange={(e) => setCarDraft((d) => ({ ...d, date_iso: e.target.value }))} style={{ ...obIn, colorScheme: "dark" }} /></div>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Millaje" : "Mileage"}</FieldLabel><input value={carDraft.mileage || ""} onChange={(e) => setCarDraft((d) => ({ ...d, mileage: e.target.value }))} inputMode="numeric" style={obIn} /></div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Próximo (fecha)" : "Next (date)"}</FieldLabel><input type="date" value={carDraft.due_iso || ""} onChange={(e) => setCarDraft((d) => ({ ...d, due_iso: e.target.value }))} style={{ ...obIn, colorScheme: "dark" }} /></div>
+            <div style={{ flex: 1 }}><FieldLabel>{lang === "es" ? "Próximo (mi)" : "Next (mi)"}</FieldLabel><input value={carDraft.due_mileage || ""} onChange={(e) => setCarDraft((d) => ({ ...d, due_mileage: e.target.value }))} inputMode="numeric" style={obIn} /></div>
+          </div>
+          <FieldLabel>{lang === "es" ? "Costo (opcional)" : "Cost (optional)"}</FieldLabel>
+          <input value={carDraft.cost || ""} onChange={(e) => setCarDraft((d) => ({ ...d, cost: e.target.value }))} inputMode="decimal" style={obIn} />
+          <input value={carDraft.note || ""} onChange={(e) => setCarDraft((d) => ({ ...d, note: e.target.value }))} placeholder={t.f_note} style={obIn} />
+          <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
+            {carDraft.id ? <button onClick={() => { deleteCarRecord(carDraft.id); setCarDraft(null); }} style={{ ...btnGhost, flex: "0 0 auto", padding: "0 18px", color: C.red }}>{t.del}</button> : null}
+            <button onClick={saveCarRecord} style={{ ...btnGold, flex: 1 }}>{t.save}</button>
+          </div>
+        </Sheet>
+      )}
       {moreOpen && (
         <Sheet onClose={() => setMoreOpen(false)}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{t.nav_more}</div>
-          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
+          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
             <button key={id} onClick={() => { setTab(id); setMoreOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "15px 6px", border: "none", borderBottom: `1px solid ${C.borderSoft}`, background: "transparent", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 16, textAlign: "left" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim }}>{icon}</span>{label}</button>
           ))}
         </Sheet>
@@ -1239,6 +1315,71 @@ function Vault({ t, lang, docs, onUpload, onOpen, onDelete }) {
           <button onClick={(e) => { e.stopPropagation(); if (typeof window !== "undefined" && window.confirm((lang === "es" ? "¿Borrar " : "Delete ") + d.name + "?")) onDelete(d); }} style={{ flexShrink: 0, background: "transparent", border: "none", color: C.mute, fontSize: 16, cursor: "pointer", padding: 4 }}>🗑</button>
         </div>))}
     </div>
+  </>);
+}
+function CarI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 11l1.6-4A2 2 0 0 1 8.5 6h7a2 2 0 0 1 1.9 1.3L19 11M4 16h16M6 11h12a2 2 0 0 1 2 2v3H4v-3a2 2 0 0 1 2-2z" /><circle cx="7.5" cy="16.5" r="1.2" /><circle cx="16.5" cy="16.5" r="1.2" /></svg>); }
+function Car({ t, lang, loc, vehicle, records, onEditVehicle, onAddRecord, onEditRecord }) {
+  const es = lang === "es";
+  const KIND = { oil: es ? "Cambio de aceite" : "Oil change", registration: es ? "Placas / Registración" : "Registration", insurance: es ? "Seguro" : "Insurance", tires: es ? "Llantas" : "Tires", brakes: es ? "Frenos" : "Brakes", inspection: es ? "Inspección" : "Inspection", service: es ? "Servicio" : "Service", note: es ? "Nota" : "Note" };
+  const label = (r) => r.title || KIND[r.kind] || (es ? "Registro" : "Record");
+  const today = todayISO();
+  const daysTo = (iso) => Math.round((new Date(iso + "T00:00:00") - new Date(today + "T00:00:00")) / 864e5);
+  const upcoming = records.filter((r) => r.due_iso).sort((a, b) => a.due_iso.localeCompare(b.due_iso));
+
+  if (!vehicle) {
+    return (
+      <div style={{ padding: "48px 16px", textAlign: "center" }}>
+        <div style={{ fontSize: 42, marginBottom: 12 }}>🚗</div>
+        <div style={{ fontSize: 15, color: C.dim, marginBottom: 20, lineHeight: 1.5 }}>{es ? "Agrega tu carro para llevar aceite, placas, seguro y todo en un lugar." : "Add your car to track oil, registration, insurance and more."}</div>
+        <button onClick={onEditVehicle} style={{ ...btnGold, padding: "0 26px" }}>{es ? "Agregar carro" : "Add car"}</button>
+      </div>
+    );
+  }
+
+  const title = [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ") || (es ? "Mi carro" : "My car");
+
+  return (<>
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 18, padding: "18px", marginTop: 6 }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+          <span style={{ width: 46, height: 46, borderRadius: 13, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, flexShrink: 0 }}><CarI /></span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 18, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{title}</div>
+            {vehicle.plate ? <div style={{ fontSize: 12.5, color: C.mute, marginTop: 2 }}>{es ? "Placa" : "Plate"} · {vehicle.plate}</div> : null}
+          </div>
+        </div>
+        <button onClick={onEditVehicle} style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.dim, borderRadius: 9, padding: "6px 12px", fontSize: 12.5, cursor: "pointer", fontFamily: SF, flexShrink: 0 }}>{es ? "Editar" : "Edit"}</button>
+      </div>
+      {(vehicle.mileage != null || vehicle.insurance_company || vehicle.insurance_expiry) && (
+        <div style={{ display: "flex", gap: 24, marginTop: 15, flexWrap: "wrap" }}>
+          {vehicle.mileage != null ? <div><div style={{ fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: C.mute }}>{es ? "Millaje" : "Mileage"}</div><div className="num" style={{ fontSize: 17, fontWeight: 600, marginTop: 3 }}>{Number(vehicle.mileage).toLocaleString()} mi</div></div> : null}
+          {vehicle.insurance_company ? <div style={{ minWidth: 0 }}><div style={{ fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: C.mute }}>{es ? "Seguro" : "Insurance"}</div><div style={{ fontSize: 15, fontWeight: 600, marginTop: 3 }}>{vehicle.insurance_company}</div></div> : null}
+        </div>
+      )}
+    </div>
+
+    {upcoming.length > 0 && (<>
+      <SectionLabel>{es ? "Próximos" : "Upcoming"}</SectionLabel>
+      <Card>{upcoming.map((r) => {
+        const d = daysTo(r.due_iso);
+        const col = d < 0 ? C.red : d <= 30 ? C.gold : C.dim;
+        const when = d < 0 ? (es ? `Vencido ${-d} d` : `${-d} d overdue`) : d === 0 ? (es ? "Hoy" : "Today") : (es ? `En ${d} d` : `In ${d} d`);
+        return (<div key={r.id} onClick={() => onEditRecord(r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer" }}>
+          <div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{label(r)}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{fmtDate(r.due_iso, lang)}{r.due_mileage ? ` · ${Number(r.due_mileage).toLocaleString()} mi` : ""}</div></div>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: col, flexShrink: 0 }}>{when}</span>
+        </div>);
+      })}</Card>
+    </>)}
+
+    <button onClick={onAddRecord} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 16, padding: "13px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600 }}>＋ {es ? "Agregar servicio / recordatorio" : "Add service / reminder"}</button>
+
+    <SectionLabel>{es ? "Historial" : "History"}</SectionLabel>
+    <Card>{records.length === 0 ? <Empty>{es ? "Sin registros aún." : "No records yet."}</Empty> : records.map((r) => (
+      <div key={r.id} onClick={() => onEditRecord(r)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer" }}>
+        <div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{label(r)}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{[r.date_iso ? fmtDate(r.date_iso, lang) : null, r.mileage ? `${Number(r.mileage).toLocaleString()} mi` : null].filter(Boolean).join(" · ") || (es ? "Sin fecha" : "No date")}</div></div>
+        {r.cost != null ? <span className="num" style={{ fontSize: 14, color: C.dim, flexShrink: 0 }}>{money(Number(r.cost), loc)}</span> : null}
+      </div>
+    ))}</Card>
   </>);
 }
 function Notes({ t, lang, notes, recentId, onEdit }) { return (<><SectionLabel>{t.nav_notes}</SectionLabel><Card>{notes.length === 0 ? <Empty>{t.notes_none}</Empty> : notes.map((b) => <ItemRow key={b.id} it={b} lang={lang} recent={b.id === recentId} onOpen={onEdit} typeTag={t["type_" + b.type]} sub={b.detail} />)}</Card></>); }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import OcIcon from "./OcIcon";
 
 const C = {
   bg: "#1A1A1F", surface: "#242429", surface2: "#2C2C33", border: "#3B3B43",
@@ -124,6 +125,7 @@ export default function AuthScreen() {
 
       <div style={{ width: "100%", maxWidth: 380, position: "relative", zIndex: 1 }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}><OcIcon size={56} ring="#8a9095" dot={C.red} /></div>
           <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: "0.14em" }}>
             onucore<span style={{ color: C.red, fontSize: 13, verticalAlign: "super", marginLeft: 3, fontWeight: 700 }}>AI</span>
           </div>

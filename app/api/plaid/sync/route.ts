@@ -84,7 +84,6 @@ export async function POST() {
           source: "plaid",
           plaid_id: t.transaction_id,
         }));
-      errors.push("got:" + (tx.data.transactions || []).length);
       if (rows.length) {
         const ids = rows.map((r) => r.plaid_id);
         const { data: existing } = await supabase.from("txns").select("plaid_id").eq("user_id", user.id).in("plaid_id", ids);

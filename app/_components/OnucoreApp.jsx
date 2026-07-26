@@ -68,7 +68,7 @@ const ACCOUNTS = [{ k: "amex", label: "Amex", type: "credit" }, { k: "visa", lab
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -76,7 +76,7 @@ const STR = {
     money_topay: "To pay", seg_txns: "Activity", seg_cats: "Categories", seg_accts: "Accounts", money_add: "Add income / expense", report: "Accountant report", none_txns: "Nothing here yet.",
     seg_subs: "Subscriptions", sub_new: "New subscription", sub_cycle: "Billing", sub_monthly: "Monthly", sub_yearly: "Yearly", sub_weekly: "Weekly", sub_renews: "Renews", sub_permo: "/mo", sub_amonth: "per month", none_subs: "No subscriptions yet.", paid_label: "Paid", sub_name_ph: "Netflix, gym, software…",
     add_income: "Income", add_expense: "Expense", scan_receipt: "Scan receipt", scanning: "Reading receipt…", f_amount: "Amount", f_cat: "Category", f_acct: "Account", f_note: "Note (optional)", f_date: "Date", f_ded: "Tax-deductible", save: "Save", del: "Delete",
-    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Business (Schedule C)", rep_personal: "Personal", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "Personal accounts: not part of Schedule C.", rep_forms: "Tax forms {y}", rep_forms_add: "Add form", rep_docs: "Documents for your accountant", rep_no_forms: "No forms yet.", rep_no_docs: "No tax documents yet — tag them as “Taxes” in the Vault.", form_kind: "Type", form_payer: "Payer", form_amount: "Amount", form_withheld: "Federal tax withheld",
+    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Independent contractor (Schedule C)", rep_personal: "Employee (W-2)", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "As an employee you don't deduct business expenses.", rep_wages: "W-2 wages", rep_forms: "Tax forms {y}", rep_forms_add: "Add form", rep_docs: "Documents for your accountant", rep_no_forms: "No forms yet.", rep_no_docs: "No tax documents yet — tag them as “Taxes” in the Vault.", form_kind: "Type", form_payer: "Payer", form_amount: "Amount", form_withheld: "Federal tax withheld",
     ded_full: "Deductible", ded_meals50: "50% deductible", ded_partial: "Business-use only", ded_none: "Not deductible",
     notes_none: "Your notes and ideas appear here.",
     cap_title: "Add anything", cap_sub: "Speak, snap a photo, or type — in any language. onucore files it where it belongs.", cap_speak: "Speak", cap_photo: "Photo reminder", cap_recent: "Just added",
@@ -105,7 +105,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -113,7 +113,7 @@ const STR = {
     money_topay: "Por pagar", seg_txns: "Movimientos", seg_cats: "Categorías", seg_accts: "Cuentas", money_add: "Agregar ingreso / gasto", report: "Reporte para contador", none_txns: "Nada aquí todavía.",
     seg_subs: "Suscripciones", sub_new: "Nueva suscripción", sub_cycle: "Ciclo", sub_monthly: "Mensual", sub_yearly: "Anual", sub_weekly: "Semanal", sub_renews: "Renueva", sub_permo: "/mes", sub_amonth: "al mes", none_subs: "Sin suscripciones aún.", paid_label: "Pagado", sub_name_ph: "Netflix, gym, software…",
     add_income: "Ingreso", add_expense: "Gasto", scan_receipt: "Escanear recibo", scanning: "Leyendo recibo…", f_amount: "Monto", f_cat: "Categoría", f_acct: "Cuenta", f_note: "Nota (opcional)", f_date: "Fecha", f_ded: "Deducible de impuestos", save: "Guardar", del: "Eliminar",
-    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Negocio (Schedule C)", rep_personal: "Personal", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Cuentas personales: no entran al Schedule C.", rep_forms: "Formas de impuestos {y}", rep_forms_add: "Agregar forma", rep_docs: "Documentos para el contador", rep_no_forms: "Sin formas aún.", rep_no_docs: "Sin documentos fiscales — márcalos como “Impuestos” en la Bóveda.", form_kind: "Tipo", form_payer: "Pagador", form_amount: "Monto", form_withheld: "Retención federal",
+    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Contratista Externo (Schedule C)", rep_personal: "Empleado (W-2)", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Como empleado no deduces gastos de negocio.", rep_wages: "Salarios W-2", rep_forms: "Formas de impuestos {y}", rep_forms_add: "Agregar forma", rep_docs: "Documentos para el contador", rep_no_forms: "Sin formas aún.", rep_no_docs: "Sin documentos fiscales — márcalos como “Impuestos” en la Bóveda.", form_kind: "Tipo", form_payer: "Pagador", form_amount: "Monto", form_withheld: "Retención federal",
     ded_full: "Deducible", ded_meals50: "50% deducible", ded_partial: "Solo uso de negocio", ded_none: "No deducible",
     notes_none: "Tus notas e ideas aparecerán aquí.",
     cap_title: "Agrega lo que sea", cap_sub: "Habla, toma una foto o escribe — en cualquier idioma. onucore lo acomoda donde va.", cap_speak: "Hablar", cap_photo: "Recordatorio con foto", cap_recent: "Recién agregado",
@@ -160,49 +160,7 @@ const toISO = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`;
 function parseT(s) { if (!s) return 9999; const m = s.match(/(\d+):?(\d+)?\s*(AM|PM)?/i); if (!m) return 9999; let h = +m[1]; const mi = +(m[2] || 0); const ap = (m[3] || "").toUpperCase(); if (ap === "PM" && h !== 12) h += 12; if (ap === "AM" && h === 12) h = 0; return h * 60 + mi; }
 function fmtDate(iso, lang) { return new Date(iso + "T00:00:00").toLocaleDateString(lang === "es" ? "es-MX" : "en-US", { weekday: "short", day: "numeric", month: "short" }); }
 
-function seedItems() {
-  const iso = (o) => { const d = new Date(); d.setDate(d.getDate() + o); return d.toISOString().slice(0, 10); };
-  return [
-    { id: uid(), type: "event", area: "work", title: "Q3 Board meeting", person: "Board", dateISO: iso(0), dateLabel: "10:00 AM", priority: "high" },
-    { id: uid(), type: "event", area: "work", title: "Investor call", person: "Carlos M.", dateISO: iso(0), dateLabel: "3:30 PM" },
-    { id: uid(), type: "event", area: "family", title: "Daughter's recital", dateISO: iso(1), dateLabel: "6:00 PM" },
-    { id: uid(), type: "event", area: "health", title: "Dentist", dateISO: iso(5), dateLabel: "9:00 AM" },
-    { id: uid(), type: "reminder", area: "personal", title: "Buy HVAC air filter", detail: "Size 20x25x1", done: false },
-    { id: uid(), type: "reminder", area: "family", title: "Buy birthday gift for Elva", done: false },
-    { id: uid(), type: "task", area: "work", title: "Send Texas expansion proposal", person: "Juan", dateISO: iso(2), dateLabel: "In 2 days", priority: "high", done: false },
-    { id: uid(), type: "task", area: "personal", title: "Renew gym membership", done: false },
-    { id: uid(), type: "obligation", area: "personal", title: "Vehicle registration", amount: 485, dateISO: iso(6) },
-    { id: uid(), type: "obligation", area: "work", title: "Office rent", amount: 4200, dateISO: iso(27), dateLabel: "Jul 1" },
-    { id: uid(), type: "obligation", area: "health", title: "Health insurance", amount: 640, dateISO: iso(12) },
-    { id: uid(), type: "idea", area: "work", title: "Premium package for VIP clients", detail: "Membership with exclusive perks and priority booking." },
-    { id: uid(), type: "note", area: "family", title: "Anniversary dinner — book Providence", detail: "Ask for the chef's table." },
-  ];
-}
-function seedTxns() {
-  const iso = (o) => { const d = new Date(); d.setDate(d.getDate() + o); return d.toISOString().slice(0, 10); };
-  return [
-    { id: uid(), kind: "income", amount: 6500, dateISO: iso(-2), cat: "client", account: "bank", note: "Retainer — Aequalend", ded: false },
-    { id: uid(), kind: "income", amount: 1800, dateISO: iso(-9), cat: "client", account: "paypal", note: "Design project", ded: false },
-    { id: uid(), kind: "income", amount: 920, dateISO: iso(-18), cat: "sales", account: "paypal", note: "Template pack", ded: false },
-    { id: uid(), kind: "expense", amount: 248.12, dateISO: iso(0), cat: "office", account: "amex", note: "Costco supplies", ded: true },
-    { id: uid(), kind: "expense", amount: 138, dateISO: iso(0), cat: "food", account: "amex", note: "Client lunch", ded: true },
-    { id: uid(), kind: "expense", amount: 86, dateISO: iso(-1), cat: "gas", account: "visa", note: "Shell", ded: true },
-    { id: uid(), kind: "expense", amount: 1299, dateISO: iso(-4), cat: "tech", account: "amex", note: "MacBook", ded: true },
-    { id: uid(), kind: "expense", amount: 52, dateISO: iso(-4), cat: "software", account: "visa", note: "Adobe CC", ded: true },
-    { id: uid(), kind: "expense", amount: 220, dateISO: iso(-7), cat: "clothing", account: "amex", note: "New jacket", ded: false },
-    { id: uid(), kind: "expense", amount: 640, dateISO: iso(-12), cat: "travel", account: "amex", note: "Flight LAX–SFO", ded: true },
-    { id: uid(), kind: "expense", amount: 300, dateISO: iso(-15), cat: "pro", account: "bank", note: "Bookkeeper", ded: true },
-    { id: uid(), kind: "expense", amount: 95, dateISO: iso(-20), cat: "phone", account: "visa", note: "Cell plan", ded: true },
-    { id: uid(), kind: "expense", amount: 64, dateISO: iso(-26), cat: "personal", account: "amex", note: "Groceries", ded: false },
-  ];
-}
-function mockCal(source, y, m) {
-  const days = source === "google"
-    ? [{ d: 4, t: "9:00 AM", title: "Team sync" }, { d: 12, t: "11:00 AM", title: "Budget review" }, { d: 19, t: "4:00 PM", title: "1:1 with Sandra" }, { d: 26, t: "10:00 AM", title: "Q4 planning" }]
-    : [{ d: 7, t: "7:00 PM", title: "Family dinner" }, { d: 15, t: "6:30 AM", title: "Gym" }, { d: 21, t: "8:00 PM", title: "Elva's birthday" }];
-  const dim = new Date(y, m + 1, 0).getDate();
-  return days.filter((e) => e.d <= dim).map((e, i) => ({ id: `${source}-${y}-${m}-${i}`, source, title: e.title, time: e.t, dateISO: toISO(y, m, e.d) }));
-}
+// (demo seed/mock data removed — the app shows only real data from Supabase)
 
 export default function AtlasAI() {
   const [items, setItems] = useState([]);
@@ -250,6 +208,7 @@ export default function AtlasAI() {
   const [txnDraft, setTxnDraft] = useState(null);
   const [review, setReview] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   // calendar
   const now0 = new Date();
   const [calY, setCalY] = useState(now0.getFullYear());
@@ -743,12 +702,10 @@ ${JSON.stringify(snapshot)}`;
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center" }}>
         <div style={{ width: "100%", maxWidth: navMax, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 10px calc(8px + env(safe-area-inset-bottom))", background: "rgba(26,26,31,.92)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.borderSoft}` }}>
           <Tab id="today" cur={tab} set={setTab} label={t.nav_today} icon={<HomeI />} />
-          <Tab id="agenda" cur={tab} set={setTab} label={t.nav_agenda} icon={<CalI />} />
-          <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
-          <Tab id="chat" cur={tab} set={setTab} label={t.nav_chat} icon={<ChatI />} />
           <Tab id="money" cur={tab} set={setTab} label={t.nav_money} icon={<WalletI />} />
+          <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
           <Tab id="vault" cur={tab} set={setTab} label={t.nav_vault} icon={<VaultI />} />
-          <Tab id="notes" cur={tab} set={setTab} label={t.nav_notes} icon={<NoteI />} />
+          <button onClick={() => setMoreOpen(true)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", fontFamily: SF, padding: "4px 10px", color: ["agenda", "chat", "notes"].includes(tab) ? C.gold : C.mute }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}><MoreI /></span><span style={{ fontSize: 10, fontWeight: ["agenda", "chat", "notes"].includes(tab) ? 600 : 400 }}>{t.nav_more}</span></button>
         </div>
       </div>
       )}
@@ -1046,6 +1003,14 @@ ${JSON.stringify(snapshot)}`;
         </Sheet>
       )}
 
+      {moreOpen && (
+        <Sheet onClose={() => setMoreOpen(false)}>
+          <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{t.nav_more}</div>
+          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
+            <button key={id} onClick={() => { setTab(id); setMoreOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "15px 6px", border: "none", borderBottom: `1px solid ${C.borderSoft}`, background: "transparent", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 16, textAlign: "left" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim }}>{icon}</span>{label}</button>
+          ))}
+        </Sheet>
+      )}
       {formDraft && (
         <Sheet onClose={() => setFormDraft(null)}>
           <div style={{ fontSize: 17, fontWeight: 600 }}>{t.rep_forms_add}</div>
@@ -1065,18 +1030,17 @@ ${JSON.stringify(snapshot)}`;
             const sumK = (arr, k) => arr.filter((x) => x.kind === k).reduce((s, x) => s + x.amount, 0);
             const bizInc = sumK(yT.filter(isBiz), "income");
             const bizExp = sumK(yT.filter(isBiz), "expense");
-            const persInc = sumK(yT.filter((x) => !isBiz(x)), "income");
-            const persExp = sumK(yT.filter((x) => !isBiz(x)), "expense");
             const yDed = yT.reduce((s, x) => s + dedAmount(x), 0);
             const netBiz = bizInc - yDed;
-            const yInc = bizInc + persInc;
-            const yExp = bizExp + persExp;
             const lines = (() => { const m = {}; yT.filter((x) => x.kind === "expense").forEach((x) => { const d = dedAmount(x); if (d <= 0) return; const ln = catBy(x.cat).line; m[ln] = (m[ln] || 0) + d; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
             const yearForms = taxForms.filter((f) => f.year === YEAR);
+            const w2 = yearForms.filter((f) => f.kind === "W-2");
+            const w2Wages = w2.reduce((s, f) => s + (Number(f.amount) || 0), 0);
+            const w2Withheld = w2.reduce((s, f) => s + (Number(f.withheld) || 0), 0);
             const exportCSV = () => { const head = ["Date", "Type", "Category", "Schedule C", "Account", "Note", "Amount", "Deductible"]; const rows = yT.slice().sort((a, b) => a.dateISO.localeCompare(b.dateISO)).map((x) => [x.dateISO, x.kind, (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], x.kind === "expense" ? catBy(x.cat).line : "Income", acctBy(x.account).label, (x.note || "").replace(/"/g, "'"), x.amount.toFixed(2), dedAmount(x).toFixed(2)]); const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n"); try { const b = new Blob([csv], { type: "text/csv" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = `onucore-finance-${YEAR}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
             const shareReport = async () => {
               const title = t.rep_title.replace("{y}", YEAR);
-              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_income}: ${money(persInc, loc)}`, `${t.rep_expenses}: ${money(persExp, loc)}`, "", ...(yearForms.length ? [t.rep_forms.replace("{y}", YEAR), ...yearForms.map((f) => `• ${f.kind}${f.payer ? " · " + f.payer : ""}: ${money(Number(f.amount) || 0, loc)}`), ""] : []), t.rep_disc].join("\n");
+              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_wages}: ${money(w2Wages, loc)}`, `${t.form_withheld}: ${money(w2Withheld, loc)}`, "", ...(yearForms.length ? [t.rep_forms.replace("{y}", YEAR), ...yearForms.map((f) => `• ${f.kind}${f.payer ? " · " + f.payer : ""}: ${money(Number(f.amount) || 0, loc)}`), ""] : []), t.rep_disc].join("\n");
               try { if (navigator.share) { await navigator.share({ title, text: body }); return; } throw 0; }
               catch (e) { if (e && e.name === "AbortError") return; try { await navigator.clipboard.writeText(body); setToast({ kind: "ok", text: t.rep_copied }); } catch {} }
             };
@@ -1089,7 +1053,7 @@ ${JSON.stringify(snapshot)}`;
               <FieldLabel>{t.rep_by}</FieldLabel>
               <div style={cardS}>{lines.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>—</div>) : lines.map(([ln, amt]) => (<div key={ln} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><span style={{ color: C.dim }}>{ln}</span><span className="num">{money(amt, loc)}</span></div>))}</div>
               <FieldLabel>{t.rep_personal}</FieldLabel>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_income} value={money(persInc, loc)} color={C.dim} /><Sum label={t.rep_expenses} value={money(persExp, loc)} color={C.dim} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_wages} value={money(w2Wages, loc)} color={C.dim} /><Sum label={t.form_withheld} value={money(w2Withheld, loc)} color={C.dim} /></div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>{t.rep_pers_note}</div>
               <FieldLabel>{t.rep_forms.replace("{y}", YEAR)}</FieldLabel>
               <div style={cardS}>{yearForms.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_forms}</div>) : yearForms.map((f) => (<div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><div style={{ minWidth: 0 }}><div>{f.kind}{f.payer ? ` · ${f.payer}` : ""}</div>{Number(f.withheld) > 0 ? (<div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>{t.form_withheld}: {money(Number(f.withheld) || 0, loc)}</div>) : null}</div><div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}><span className="num">{money(Number(f.amount) || 0, loc)}</span><button onClick={() => deleteTaxForm(f.id)} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", fontSize: 17, lineHeight: 1, fontFamily: SF }}>×</button></div></div>))}</div>
@@ -1236,7 +1200,7 @@ function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg,
     })()}
     {obligations.length > 0 && (<><SectionLabel>{t.money_topay}</SectionLabel><Card>{obligations.map((o) => { const d = daysUntil(o.dateISO); const col = o.done ? C.mute : d == null ? C.mute : d <= 3 ? C.red : d <= 14 ? C.gold : C.mute; return <ItemRow key={o.id} it={o} lang={lang} onOpen={onEditItem} right={money(o.amount, loc)} sub={o.done ? t.paid_label : (d != null ? (d <= 0 ? t.due_today : t.due_in.replace("{n}", d)) : o.dateLabel)} subColor={col} check toggle={() => onTogglePaid(o.id)} />; })}</Card></>)}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, margin: "18px 0 4px" }}><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{[["txns", t.seg_txns], ["subs", t.seg_subs], ["cats", t.seg_cats], ["accts", t.seg_accts]].map(([k, lbl]) => (<button key={k} onClick={() => setFseg(k)} style={{ padding: "7px 12px", borderRadius: 10, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: fseg === k ? 600 : 400, background: fseg === k ? C.surface2 : "transparent", color: fseg === k ? C.text : C.mute, border: `1px solid ${fseg === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>))}</div><button onClick={fseg === "subs" ? onAddSub : onAdd} style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 999, border: "none", background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusSm /></button></div>
-    {fseg === "txns" && <Card>{view.length === 0 ? <Empty>{t.none_txns}</Empty> : view.map((x) => { const meta = x.kind === "income" ? incBy(x.cat) : catBy(x.cat); return (<div key={x.id} onClick={() => onEditTxn(x)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: x.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}><SubLogo title={x.note || meta[lang === "es" ? "es" : "en"]} logo={x.logo} C={C} size={36} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{x.note || meta[lang === "es" ? "es" : "en"]}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{meta[lang === "es" ? "es" : "en"]} · {x.account === "personal" ? "Personal" : x.account === "business" ? "Oprinte" : acctBy(x.account).label} · {fmtDate(x.dateISO, lang)}{x.kind === "expense" && dedAmount(x) > 0 ? "  · ✓" : ""}</div></div></div><div className="num" style={{ fontSize: 15, color: x.kind === "income" ? C.green : C.text, flexShrink: 0 }}>{x.kind === "income" ? "+" : "−"}{money(x.amount, loc)}</div></div>); })}</Card>}
+    {fseg === "txns" && <Card>{view.length === 0 ? <Empty>{t.none_txns}</Empty> : view.map((x) => { const meta = x.kind === "income" ? incBy(x.cat) : catBy(x.cat); return (<div key={x.id} onClick={() => onEditTxn(x)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: x.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}><SubLogo title={x.note || meta[lang === "es" ? "es" : "en"]} logo={x.logo} C={C} size={36} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{x.note || meta[lang === "es" ? "es" : "en"]}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{meta[lang === "es" ? "es" : "en"]} · {x.account === "personal" ? (lang === "es" ? "Empleado" : "Employee") : x.account === "business" ? (lang === "es" ? "Contratista" : "Contractor") : acctBy(x.account).label} · {fmtDate(x.dateISO, lang)}{x.kind === "expense" && dedAmount(x) > 0 ? "  · ✓" : ""}</div></div></div><div className="num" style={{ fontSize: 15, color: x.kind === "income" ? C.green : C.text, flexShrink: 0 }}>{x.kind === "income" ? "+" : "−"}{money(x.amount, loc)}</div></div>); })}</Card>}
     {fseg === "cats" && <Card>{catT.length === 0 ? <Empty>{t.none_txns}</Empty> : catT.map(({ c, total, ded }) => (<div key={c.k} style={{ padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 11, alignItems: "center" }}><span style={{ width: 9, height: 9, borderRadius: 999, background: c.color }} /><span style={{ fontSize: 15 }}>{c[lang === "es" ? "es" : "en"]}</span></div><div className="num" style={{ fontSize: 15 }}>{money(total, loc)}</div></div><div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, paddingLeft: 20, flexWrap: "wrap" }}><span style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: c.ded === "none" ? C.mute : C.gold, border: `1px solid ${c.ded === "none" ? C.border : C.goldSoft}`, borderRadius: 6, padding: "1px 7px" }}>{dlabel(c.ded)}</span>{ded > 0 && <span style={{ fontSize: 11.5, color: C.gold }}>{money(ded, loc)} · {c.line}</span>}</div></div>))}</Card>}
     {fseg === "accts" && <Card>{acctT.map(({ a, out, inc }) => (<div key={a.k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderBottom: `1px solid ${C.borderSoft}` }}><div style={{ display: "flex", gap: 12, alignItems: "center" }}><span style={{ width: 34, height: 34, borderRadius: 9, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.gold }}><AcctI type={a.type} /></span><div><div style={{ fontSize: 15 }}>{a.label}</div><div style={{ fontSize: 11.5, color: C.mute, textTransform: "capitalize" }}>{a.type}</div></div></div><div style={{ textAlign: "right" }}>{inc > 0 && <div className="num" style={{ fontSize: 13.5, color: C.green }}>+{money(inc, loc)}</div>}{out > 0 && <div className="num" style={{ fontSize: 13.5, color: C.dim }}>−{money(out, loc)}</div>}</div></div>))}</Card>}
     {fseg === "subs" && (() => { const norm = (s) => { const a = Number(s.amount) || 0; return s.dateLabel === "yearly" ? a / 12 : s.dateLabel === "weekly" ? (a * 52) / 12 : a; }; const moTotal = subs.reduce((sum, s) => sum + norm(s), 0); const cyl = (s) => (s.dateLabel === "yearly" ? t.sub_yearly : s.dateLabel === "weekly" ? t.sub_weekly : t.sub_monthly); return (<><PlaidBankSection lang={lang} C={C} SF={SF} /><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "2px 2px 12px" }}><span style={{ fontSize: 12.5, color: C.dim }}>{subs.length} {t.seg_subs.toLowerCase()}</span><span className="num" style={{ fontSize: 22, fontWeight: 600 }}>{money(moTotal, loc)} <span style={{ fontSize: 12, color: C.mute, fontWeight: 400 }}>{t.sub_amonth}</span></span></div><Card>{subs.length === 0 ? <Empty>{t.none_subs}</Empty> : subs.map((s) => (<div key={s.id} onClick={() => onEditItem(s)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: s.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}><SubLogo logo={s.logo} title={s.title} C={C} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{cyl(s)}{s.dateISO ? ` · ${t.sub_renews} ${fmtDate(s.dateISO, lang)}` : ""}</div></div></div><div className="num" style={{ fontSize: 15, flexShrink: 0 }}>{money(Number(s.amount) || 0, loc)}</div></div>))}</Card></>); })()}
@@ -1316,6 +1280,7 @@ function HomeI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill=
 function CalI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 9h18M8 3v4M16 3v4" /></svg>); }
 function WalletI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v0H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9" /><circle cx="17" cy="13" r="1.3" fill="currentColor" stroke="none" /></svg>); }
 function NoteI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>); }
+function MoreI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="12" r="1.3" /><circle cx="12" cy="12" r="1.3" /><circle cx="19" cy="12" r="1.3" /></svg>); }
 function PlusI() { return (<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>); }
 function ChatI({ big }) { const s = big ? 27 : 21; return (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5h.5a8.5 8.5 0 0 1 8 8z" /></svg>); }
 function VaultI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg>); }

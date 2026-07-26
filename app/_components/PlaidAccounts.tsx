@@ -102,8 +102,8 @@ export default function PlaidAccounts({
               </div>
             </div>
             <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              {tag("personal", "Personal")}
-              {tag("business", "Oprinte")}
+              {tag("personal", es ? "Empleado" : "Employee")}
+              {tag("business", es ? "Contratista" : "Contractor")}
             </div>
           </div>
         );

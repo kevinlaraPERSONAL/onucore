@@ -77,7 +77,7 @@ export async function POST() {
           kind: t.amount > 0 ? "expense" : "income",
           amount: Math.abs(t.amount),
           cat: t.amount > 0 ? "personal" : "other_income",
-          account: "bank",
+          account: it.label || "personal",
           date_iso: t.date,
           note: t.merchant_name || t.name || "",
           ded: false,

@@ -6,11 +6,13 @@ import { usePlaidLink, type PlaidLinkOnSuccess } from "react-plaid-link";
 // exchanges the public token + syncs transactions/subscriptions, then onDone().
 export default function PlaidConnect({
   label,
+  accountLabel,
   busyLabel = "…",
   onDone,
   style,
 }: {
   label: string;
+  accountLabel?: string;
   busyLabel?: string;
   onDone?: () => void;
   style?: React.CSSProperties;
@@ -26,7 +28,7 @@ export default function PlaidConnect({
           await fetch("/api/plaid/exchange", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ public_token }),
+            body: JSON.stringify({ public_token, label: accountLabel }),
           });
           await fetch("/api/plaid/sync", { method: "POST" });
         } catch {

@@ -11,13 +11,14 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
 
-  let body: { public_token?: string };
+  let body: { public_token?: string; label?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "invalid_json" }, { status: 400 });
   }
   if (!body.public_token) return Response.json({ error: "no_token" }, { status: 400 });
+  const label = body.label === "business" ? "business" : "personal";
 
   try {
     const ex = await plaidClient().itemPublicTokenExchange({ public_token: body.public_token });
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       access_token: ex.data.access_token,
       item_id: ex.data.item_id,
+      label,
     });
     return Response.json({ ok: true });
   } catch (e) {

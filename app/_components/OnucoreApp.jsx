@@ -76,7 +76,7 @@ const STR = {
     money_topay: "To pay", seg_txns: "Activity", seg_cats: "Categories", seg_accts: "Accounts", money_add: "Add income / expense", report: "Accountant report", none_txns: "Nothing here yet.",
     seg_subs: "Subscriptions", sub_new: "New subscription", sub_cycle: "Billing", sub_monthly: "Monthly", sub_yearly: "Yearly", sub_weekly: "Weekly", sub_renews: "Renews", sub_permo: "/mo", sub_amonth: "per month", none_subs: "No subscriptions yet.", paid_label: "Paid", sub_name_ph: "Netflix, gym, software…",
     add_income: "Income", add_expense: "Expense", scan_receipt: "Scan receipt", scanning: "Reading receipt…", f_amount: "Amount", f_cat: "Category", f_acct: "Account", f_note: "Note (optional)", f_date: "Date", f_ded: "Tax-deductible", save: "Save", del: "Delete",
-    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Business (Schedule C)", rep_personal: "Personal", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "Personal accounts: not part of Schedule C.",
+    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Business (Schedule C)", rep_personal: "Personal", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "Personal accounts: not part of Schedule C.", rep_forms: "Tax forms {y}", rep_forms_add: "Add form", rep_docs: "Documents for your accountant", rep_no_forms: "No forms yet.", rep_no_docs: "No tax documents yet — tag them as “Taxes” in the Vault.", form_kind: "Type", form_payer: "Payer", form_amount: "Amount", form_withheld: "Federal tax withheld",
     ded_full: "Deductible", ded_meals50: "50% deductible", ded_partial: "Business-use only", ded_none: "Not deductible",
     notes_none: "Your notes and ideas appear here.",
     cap_title: "Add anything", cap_sub: "Speak, snap a photo, or type — in any language. onucore files it where it belongs.", cap_speak: "Speak", cap_photo: "Photo reminder", cap_recent: "Just added",
@@ -113,7 +113,7 @@ const STR = {
     money_topay: "Por pagar", seg_txns: "Movimientos", seg_cats: "Categorías", seg_accts: "Cuentas", money_add: "Agregar ingreso / gasto", report: "Reporte para contador", none_txns: "Nada aquí todavía.",
     seg_subs: "Suscripciones", sub_new: "Nueva suscripción", sub_cycle: "Ciclo", sub_monthly: "Mensual", sub_yearly: "Anual", sub_weekly: "Semanal", sub_renews: "Renueva", sub_permo: "/mes", sub_amonth: "al mes", none_subs: "Sin suscripciones aún.", paid_label: "Pagado", sub_name_ph: "Netflix, gym, software…",
     add_income: "Ingreso", add_expense: "Gasto", scan_receipt: "Escanear recibo", scanning: "Leyendo recibo…", f_amount: "Monto", f_cat: "Categoría", f_acct: "Cuenta", f_note: "Nota (opcional)", f_date: "Fecha", f_ded: "Deducible de impuestos", save: "Guardar", del: "Eliminar",
-    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Negocio (Schedule C)", rep_personal: "Personal", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Cuentas personales: no entran al Schedule C.",
+    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Negocio (Schedule C)", rep_personal: "Personal", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Cuentas personales: no entran al Schedule C.", rep_forms: "Formas de impuestos {y}", rep_forms_add: "Agregar forma", rep_docs: "Documentos para el contador", rep_no_forms: "Sin formas aún.", rep_no_docs: "Sin documentos fiscales — márcalos como “Impuestos” en la Bóveda.", form_kind: "Tipo", form_payer: "Pagador", form_amount: "Monto", form_withheld: "Retención federal",
     ded_full: "Deducible", ded_meals50: "50% deducible", ded_partial: "Solo uso de negocio", ded_none: "No deducible",
     notes_none: "Tus notas e ideas aparecerán aquí.",
     cap_title: "Agrega lo que sea", cap_sub: "Habla, toma una foto o escribe — en cualquier idioma. onucore lo acomoda donde va.", cap_speak: "Hablar", cap_photo: "Recordatorio con foto", cap_recent: "Recién agregado",
@@ -262,6 +262,8 @@ export default function AtlasAI() {
   const [docs, setDocs] = useState([]);
   const [docUp, setDocUp] = useState(null);
   const docFileRef = useRef(null);
+  const [taxForms, setTaxForms] = useState([]);
+  const [formDraft, setFormDraft] = useState(null);
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
@@ -283,6 +285,7 @@ export default function AtlasAI() {
         setTxns(d.txns);
         if (d.profile) setProfile((p) => ({ ...p, ...d.profile }));
         const dd = await supabase.from("documents").select("*").order("created_at", { ascending: false }); if (alive && dd.data) setDocs(dd.data);
+        const tf = await supabase.from("tax_forms").select("*").order("created_at", { ascending: false }); if (alive && tf.data) setTaxForms(tf.data);
       } catch { /* noop */ }
     })();
     return () => { alive = false; };
@@ -442,6 +445,16 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   };
   const openDoc = async (d) => { const { data } = await supabase.storage.from("documents").createSignedUrl(d.path, 120); if (data && data.signedUrl && typeof window !== "undefined") window.open(data.signedUrl, "_blank"); };
   const deleteDoc = async (d) => { await supabase.storage.from("documents").remove([d.path]); await supabase.from("documents").delete().eq("id", d.id); refreshDocs(); };
+  const refreshForms = async () => { const { data } = await supabase.from("tax_forms").select("*").order("created_at", { ascending: false }); setTaxForms(data || []); };
+  const saveTaxForm = async () => {
+    if (!formDraft) return;
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id);
+    if (!uid2) return;
+    await supabase.from("tax_forms").insert({ user_id: uid2, year: Number(formDraft.year) || YEAR, kind: formDraft.kind, payer: (formDraft.payer || "").trim() || null, amount: Number(formDraft.amount) || 0, withheld: Number(formDraft.withheld) || 0 });
+    setFormDraft(null); refreshForms(); setToast({ kind: "ok", text: lang === "es" ? "Forma guardada" : "Form saved" });
+  };
+  const deleteTaxForm = async (id) => { await supabase.from("tax_forms").delete().eq("id", id); refreshForms(); };
   const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertTxn(supabase, x); setTxnDraft(null); };
   const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); db.deleteTxn(supabase, id); setTxnDraft(null); };
   function scanReceipt(e) {
@@ -1033,6 +1046,17 @@ ${JSON.stringify(snapshot)}`;
         </Sheet>
       )}
 
+      {formDraft && (
+        <Sheet onClose={() => setFormDraft(null)}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{t.rep_forms_add}</div>
+          <FieldLabel>{t.form_kind}</FieldLabel>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{["W-2", "1099-NEC", "1099-MISC", "1099-K", lang === "es" ? "Otra" : "Other"].map((k) => (<button key={k} type="button" onClick={() => setFormDraft((d) => ({ ...d, kind: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${formDraft.kind === k ? C.gold : C.border}`, background: formDraft.kind === k ? "rgba(229,72,77,.12)" : "transparent", color: formDraft.kind === k ? C.gold : C.dim }}>{k}</button>))}</div>
+          <FieldLabel>{t.form_payer}</FieldLabel>
+          <input value={formDraft.payer} onChange={(e) => setFormDraft((d) => ({ ...d, payer: e.target.value }))} style={obIn} />
+          <div style={{ display: "flex", gap: 10 }}><div style={{ flex: 1 }}><FieldLabel>{t.form_amount}</FieldLabel><input value={formDraft.amount} onChange={(e) => setFormDraft((d) => ({ ...d, amount: e.target.value }))} inputMode="decimal" style={obIn} /></div><div style={{ flex: 1 }}><FieldLabel>{t.form_withheld}</FieldLabel><input value={formDraft.withheld} onChange={(e) => setFormDraft((d) => ({ ...d, withheld: e.target.value }))} inputMode="decimal" style={obIn} /></div></div>
+          <button onClick={saveTaxForm} style={{ ...btnGold, width: "100%", marginTop: 22 }}>{t.save}</button>
+        </Sheet>
+      )}
       {reportOpen && (
         <Sheet onClose={() => setReportOpen(false)}>
           {(() => {
@@ -1048,10 +1072,11 @@ ${JSON.stringify(snapshot)}`;
             const yInc = bizInc + persInc;
             const yExp = bizExp + persExp;
             const lines = (() => { const m = {}; yT.filter((x) => x.kind === "expense").forEach((x) => { const d = dedAmount(x); if (d <= 0) return; const ln = catBy(x.cat).line; m[ln] = (m[ln] || 0) + d; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
+            const yearForms = taxForms.filter((f) => f.year === YEAR);
             const exportCSV = () => { const head = ["Date", "Type", "Category", "Schedule C", "Account", "Note", "Amount", "Deductible"]; const rows = yT.slice().sort((a, b) => a.dateISO.localeCompare(b.dateISO)).map((x) => [x.dateISO, x.kind, (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], x.kind === "expense" ? catBy(x.cat).line : "Income", acctBy(x.account).label, (x.note || "").replace(/"/g, "'"), x.amount.toFixed(2), dedAmount(x).toFixed(2)]); const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n"); try { const b = new Blob([csv], { type: "text/csv" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = `onucore-finance-${YEAR}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
             const shareReport = async () => {
               const title = t.rep_title.replace("{y}", YEAR);
-              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_income}: ${money(persInc, loc)}`, `${t.rep_expenses}: ${money(persExp, loc)}`, "", t.rep_disc].join("\n");
+              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_income}: ${money(persInc, loc)}`, `${t.rep_expenses}: ${money(persExp, loc)}`, "", ...(yearForms.length ? [t.rep_forms.replace("{y}", YEAR), ...yearForms.map((f) => `• ${f.kind}${f.payer ? " · " + f.payer : ""}: ${money(Number(f.amount) || 0, loc)}`), ""] : []), t.rep_disc].join("\n");
               try { if (navigator.share) { await navigator.share({ title, text: body }); return; } throw 0; }
               catch (e) { if (e && e.name === "AbortError") return; try { await navigator.clipboard.writeText(body); setToast({ kind: "ok", text: t.rep_copied }); } catch {} }
             };
@@ -1066,6 +1091,11 @@ ${JSON.stringify(snapshot)}`;
               <FieldLabel>{t.rep_personal}</FieldLabel>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_income} value={money(persInc, loc)} color={C.dim} /><Sum label={t.rep_expenses} value={money(persExp, loc)} color={C.dim} /></div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>{t.rep_pers_note}</div>
+              <FieldLabel>{t.rep_forms.replace("{y}", YEAR)}</FieldLabel>
+              <div style={cardS}>{yearForms.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_forms}</div>) : yearForms.map((f) => (<div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><div style={{ minWidth: 0 }}><div>{f.kind}{f.payer ? ` · ${f.payer}` : ""}</div>{Number(f.withheld) > 0 ? (<div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>{t.form_withheld}: {money(Number(f.withheld) || 0, loc)}</div>) : null}</div><div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}><span className="num">{money(Number(f.amount) || 0, loc)}</span><button onClick={() => deleteTaxForm(f.id)} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", fontSize: 17, lineHeight: 1, fontFamily: SF }}>×</button></div></div>))}</div>
+              <button onClick={() => setFormDraft({ kind: "1099-NEC", payer: "Aequalend", amount: "", withheld: "", year: YEAR })} style={{ ...btnGhost, width: "100%", marginTop: 8, fontSize: 13.5 }}>+ {t.rep_forms_add}</button>
+              <FieldLabel>{t.rep_docs}</FieldLabel>
+              <div style={cardS}>{docs.filter((d) => d.category === "tax").length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_docs}</div>) : docs.filter((d) => d.category === "tax").map((d) => (<div key={d.id} onClick={() => openDoc(d)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14, cursor: "pointer" }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📄 {d.name}</span><span style={{ color: C.gold, fontSize: 12, flexShrink: 0 }}>{lang === "es" ? "Ver" : "View"}</span></div>))}</div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 12, lineHeight: 1.5 }}>ⓘ {t.rep_disc}</div>
               <div style={{ display: "flex", gap: 8, marginTop: 18 }}><button onClick={() => setReportOpen(false)} style={{ ...btnGhost, flex: "0 0 auto", padding: "0 16px", fontSize: 14, whiteSpace: "nowrap" }}>{t.rep_close}</button><button onClick={exportCSV} style={{ ...btnGhost, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, whiteSpace: "nowrap" }}><DownI /> {t.rep_export}</button><button onClick={shareReport} style={{ ...btnGold, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, whiteSpace: "nowrap" }}><ShareI /> {t.rep_share}</button></div>
             </>);

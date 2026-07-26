@@ -27,6 +27,7 @@ export async function POST() {
   }
 
   await supabase.from("plaid_items").delete().eq("user_id", user.id);
+  await supabase.from("plaid_accounts").delete().eq("user_id", user.id);
   await supabase.from("txns").delete().eq("user_id", user.id).eq("source", "plaid");
   await supabase.from("items").delete().eq("user_id", user.id).eq("source", "plaid");
 

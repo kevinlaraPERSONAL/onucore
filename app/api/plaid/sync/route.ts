@@ -46,6 +46,13 @@ export async function POST() {
   if (!items || !items.length) return Response.json({ error: "no_bank", subsAdded: 0, txnsAdded: 0 }, { status: 400 });
 
   const client = plaidClient();
+
+  // Per-account tags (personal | business). A single login can hold both.
+  const { data: accRows } = await supabase.from("plaid_accounts").select("account_id, label").eq("user_id", user.id);
+  const accMap = new Map<string, string>(
+    (accRows || []).map((a: { account_id: string; label: string }) => [a.account_id, a.label]),
+  );
+
   const { data: existSubs } = await supabase
     .from("items")
     .select("title")
@@ -58,6 +65,24 @@ export async function POST() {
   const errors: string[] = [];
 
   for (const it of items) {
+    // accounts on this login → store them so the user can tag each one
+    try {
+      const acc = await ready(() => client.accountsGet({ access_token: it.access_token }));
+      const toUpsert = (acc.data.accounts || []).map((a) => ({
+        user_id: user.id,
+        account_id: a.account_id,
+        name: a.official_name || a.name || null,
+        mask: a.mask || null,
+        label: accMap.get(a.account_id) || it.label || "personal",
+      }));
+      if (toUpsert.length) {
+        await supabase.from("plaid_accounts").upsert(toUpsert, { onConflict: "user_id,account_id", ignoreDuplicates: true });
+        for (const a of toUpsert) if (!accMap.has(a.account_id)) accMap.set(a.account_id, a.label);
+      }
+    } catch (e) {
+      errors.push("acc:" + ((e as { message?: string })?.message || "err"));
+    }
+
     // recent transactions → income / expenses
     try {
       const end = new Date().toISOString().slice(0, 10);
@@ -77,12 +102,13 @@ export async function POST() {
           kind: t.amount > 0 ? "expense" : "income",
           amount: Math.abs(t.amount),
           cat: t.amount > 0 ? "personal" : "other_income",
-          account: it.label || "personal",
+          account: accMap.get(t.account_id) || it.label || "personal",
           date_iso: t.date,
           note: t.merchant_name || t.name || "",
           ded: false,
           source: "plaid",
           plaid_id: t.transaction_id,
+          plaid_account: t.account_id,
         }));
       if (rows.length) {
         const ids = rows.map((r) => r.plaid_id);

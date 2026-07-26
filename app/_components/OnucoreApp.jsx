@@ -66,7 +66,7 @@ const ACCOUNTS = [{ k: "amex", label: "Amex", type: "credit" }, { k: "visa", lab
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -103,7 +103,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -257,6 +257,9 @@ export default function AtlasAI() {
   // Google Calendar — real connection state + events fetched for the visible month.
   const [gcal, setGcal] = useState({ connected: false, email: null, loading: true });
   const [gcalEvents, setGcalEvents] = useState([]);
+  const [docs, setDocs] = useState([]);
+  const [docUp, setDocUp] = useState(null);
+  const docFileRef = useRef(null);
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
@@ -277,6 +280,7 @@ export default function AtlasAI() {
         setItems(d.items);
         setTxns(d.txns);
         if (d.profile) setProfile((p) => ({ ...p, ...d.profile }));
+        const dd = await supabase.from("documents").select("*").order("created_at", { ascending: false }); if (alive && dd.data) setDocs(dd.data);
       } catch { /* noop */ }
     })();
     return () => { alive = false; };
@@ -420,6 +424,22 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   const openTxn = (tx) => setTxnDraft({ ...tx, amount: String(tx.amount) });
   const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: profile.defaultAccount || "amex", note: "", ded: true, _new: true });
   const newSub = () => setItemDraft({ id: uid(), type: "subscription", area: "personal", title: "", amount: "", dateISO: "", dateLabel: "monthly", _new: true });
+  const refreshDocs = async () => { const { data } = await supabase.from("documents").select("*").order("created_at", { ascending: false }); setDocs(data || []); };
+  const onDocFile = (e) => { const f = e.target.files && e.target.files[0]; if (f) setDocUp({ file: f, name: f.name, category: "tax" }); e.target.value = ""; };
+  const uploadDoc = async () => {
+    if (!docUp || docUp.busy) return;
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id);
+    if (!uid2) return;
+    setDocUp((u) => ({ ...u, busy: true }));
+    const path = `${uid2}/${uid()}-${docUp.name.replace(/[^\w.\-]+/g, "_")}`;
+    const up = await supabase.storage.from("documents").upload(path, docUp.file);
+    if (up.error) { setDocUp((u) => ({ ...u, busy: false })); setToast({ kind: "warn", text: up.error.message }); return; }
+    await supabase.from("documents").insert({ user_id: uid2, name: docUp.name, category: docUp.category, path, size: docUp.file.size, mime: docUp.file.type });
+    setDocUp(null); refreshDocs(); setToast({ kind: "ok", text: lang === "es" ? "Documento guardado" : "Document saved" });
+  };
+  const openDoc = async (d) => { const { data } = await supabase.storage.from("documents").createSignedUrl(d.path, 120); if (data && data.signedUrl && typeof window !== "undefined") window.open(data.signedUrl, "_blank"); };
+  const deleteDoc = async (d) => { await supabase.storage.from("documents").remove([d.path]); await supabase.from("documents").delete().eq("id", d.id); refreshDocs(); };
   const saveTxn = () => { const a = parseFloat(txnDraft.amount); if (!a || a <= 0) return; const { _new, ...x } = { ...txnDraft, amount: a }; setTxns((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertTxn(supabase, x); setTxnDraft(null); };
   const deleteTxn = () => { const id = txnDraft.id; setTxns((p) => p.filter((x) => x.id !== id)); db.deleteTxn(supabase, id); setTxnDraft(null); };
   function scanReceipt(e) {
@@ -666,12 +686,13 @@ ${JSON.stringify(snapshot)}`;
       <input ref={receiptRef} type="file" accept="image/*" capture="environment" onChange={scanReceipt} style={{ display: "none" }} />
       <input ref={waFileRef} type="file" accept="image/*" capture="environment" onChange={waPhoto} style={{ display: "none" }} />
       <input ref={profileFileRef} type="file" accept="image/*" onChange={pickProfilePhoto} style={{ display: "none" }} />
+      <input ref={docFileRef} type="file" onChange={onDocFile} style={{ display: "none" }} />
 
       {desktop && (
         <aside style={{ position: "fixed", left: 0, top: 0, width: 220, height: "100vh", background: C.surface, borderRight: `1px solid ${C.borderSoft}`, padding: "22px 14px 18px", display: "flex", flexDirection: "column", gap: 5, zIndex: 25, boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px 16px" }}><OcIcon size={26} ring="#8a9095" dot={C.red} /><span style={{ fontSize: 21, fontWeight: 600, letterSpacing: "0.1em" }}>onucore<span style={{ color: C.red, fontSize: 10, verticalAlign: "super", marginLeft: 2, fontWeight: 700 }}>AI</span></span></div>
           <button onClick={() => setTab("capture")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 12, border: "none", background: C.red, color: "#ffffff", cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}><PlusI /> {lang === "es" ? "Capturar" : "Capture"}</button>
-          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
+          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
         </aside>
       )}
       <div style={{ maxWidth: contentMax, marginLeft: desktop ? `max(220px, calc(220px + (100% - ${contentMax + 220}px) / 2))` : "auto", marginRight: "auto", minHeight: "100vh", position: "relative", paddingBottom: desktop ? 40 : 86 }}>
@@ -697,6 +718,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
           {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
+          {tab === "vault" && <Vault {...{ t, lang, docs, onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
         </div>
@@ -710,6 +732,7 @@ ${JSON.stringify(snapshot)}`;
           <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
           <Tab id="chat" cur={tab} set={setTab} label={t.nav_chat} icon={<ChatI />} />
           <Tab id="money" cur={tab} set={setTab} label={t.nav_money} icon={<WalletI />} />
+          <Tab id="vault" cur={tab} set={setTab} label={t.nav_vault} icon={<VaultI />} />
           <Tab id="notes" cur={tab} set={setTab} label={t.nav_notes} icon={<NoteI />} />
         </div>
       </div>
@@ -962,6 +985,15 @@ ${JSON.stringify(snapshot)}`;
         </Sheet>
       )}
 
+      {docUp && (
+        <Sheet onClose={() => setDocUp(null)}>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{t.doc_upload}</div>
+          <div style={{ fontSize: 13, color: C.dim, marginTop: 4, wordBreak: "break-all" }}>{docUp.name}</div>
+          <FieldLabel>{lang === "es" ? "Categoría" : "Category"}</FieldLabel>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]].map(([k, lbl]) => <button key={k} type="button" onClick={() => setDocUp((u) => ({ ...u, category: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${docUp.category === k ? C.gold : C.border}`, background: docUp.category === k ? "rgba(229,72,77,.12)" : "transparent", color: docUp.category === k ? C.gold : C.dim }}>{lbl}</button>)}</div>
+          <button onClick={uploadDoc} disabled={docUp.busy} style={{ ...btnGold, width: "100%", marginTop: 22, opacity: docUp.busy ? 0.6 : 1 }}>{docUp.busy ? "…" : t.doc_upload}</button>
+        </Sheet>
+      )}
       {txnDraft && (
         <Sheet onClose={() => setTxnDraft(null)}>
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>{[["expense", t.add_expense], ["income", t.add_income]].map(([k, lbl]) => (<button key={k} onClick={() => setTxnDraft({ ...txnDraft, kind: k, cat: k === "income" ? "client" : "office", ded: k === "expense" })} style={{ flex: 1, padding: "10px 0", borderRadius: 12, cursor: "pointer", fontFamily: SF, fontSize: 14, fontWeight: txnDraft.kind === k ? 600 : 400, background: txnDraft.kind === k ? (k === "income" ? C.green : C.surface2) : "transparent", color: txnDraft.kind === k ? (k === "income" ? C.bg : C.text) : C.mute, border: `1px solid ${txnDraft.kind === k ? (k === "income" ? C.green : C.border) : C.border}` }}>{lbl}</button>))}</div>
@@ -1166,6 +1198,25 @@ function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg,
     {fseg === "subs" && (() => { const norm = (s) => { const a = Number(s.amount) || 0; return s.dateLabel === "yearly" ? a / 12 : s.dateLabel === "weekly" ? (a * 52) / 12 : a; }; const moTotal = subs.reduce((sum, s) => sum + norm(s), 0); const cyl = (s) => (s.dateLabel === "yearly" ? t.sub_yearly : s.dateLabel === "weekly" ? t.sub_weekly : t.sub_monthly); return (<><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "2px 2px 12px" }}><span style={{ fontSize: 12.5, color: C.dim }}>{subs.length} {t.seg_subs.toLowerCase()}</span><span className="num" style={{ fontSize: 22, fontWeight: 600 }}>{money(moTotal, loc)} <span style={{ fontSize: 12, color: C.mute, fontWeight: 400 }}>{t.sub_amonth}</span></span></div><Card>{subs.length === 0 ? <Empty>{t.none_subs}</Empty> : subs.map((s) => (<div key={s.id} onClick={() => onEditItem(s)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: s.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{s.title}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{cyl(s)}{s.dateISO ? ` · ${t.sub_renews} ${fmtDate(s.dateISO, lang)}` : ""}</div></div><div className="num" style={{ fontSize: 15, flexShrink: 0 }}>{money(Number(s.amount) || 0, loc)}</div></div>))}</Card></>); })()}
   </>);
 }
+function Vault({ t, lang, docs, onUpload, onOpen, onDelete }) {
+  const [cat, setCat] = useState("all");
+  const CATS2 = [["all", t.doc_all], ["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]];
+  const catName = (k) => ({ tax: t.cat_tax, receipt: t.cat_receipt, insurance: t.cat_insurance, id: t.cat_id, other: t.cat_other }[k] || k);
+  const list = cat === "all" ? docs : docs.filter((d) => d.category === cat);
+  const kb = (n) => (n == null ? "" : n < 1024 ? n + " B" : n < 1048576 ? Math.round(n / 1024) + " KB" : (n / 1048576).toFixed(1) + " MB");
+  return (<>
+    <div style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 6, paddingBottom: 2 }}>{CATS2.map(([k, lbl]) => <button key={k} onClick={() => setCat(k)} style={{ flexShrink: 0, padding: "7px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: cat === k ? 600 : 400, background: cat === k ? C.surface2 : "transparent", color: cat === k ? C.text : C.mute, border: `1px solid ${cat === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>)}</div>
+    <button onClick={onUpload} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 14, padding: "13px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600 }}>＋ {t.doc_upload}</button>
+    <div style={{ marginTop: 14 }}>
+      {list.length === 0 ? <div style={{ padding: "24px 14px", textAlign: "center", color: C.mute, fontSize: 13.5 }}>{t.doc_none}</div>
+        : list.map((d) => (<div key={d.id} className="rise" onClick={() => onOpen(d)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 9, cursor: "pointer" }}>
+          <span style={{ width: 36, height: 36, borderRadius: 9, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, flexShrink: 0 }}><DocI /></span>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 2 }}>{catName(d.category)}{d.size ? ` · ${kb(d.size)}` : ""} · {fmtDate((d.created_at || "").slice(0, 10), lang)}</div></div>
+          <button onClick={(e) => { e.stopPropagation(); if (typeof window !== "undefined" && window.confirm((lang === "es" ? "¿Borrar " : "Delete ") + d.name + "?")) onDelete(d); }} style={{ flexShrink: 0, background: "transparent", border: "none", color: C.mute, fontSize: 16, cursor: "pointer", padding: 4 }}>🗑</button>
+        </div>))}
+    </div>
+  </>);
+}
 function Notes({ t, lang, notes, recentId, onEdit }) { return (<><SectionLabel>{t.nav_notes}</SectionLabel><Card>{notes.length === 0 ? <Empty>{t.notes_none}</Empty> : notes.map((b) => <ItemRow key={b.id} it={b} lang={lang} recent={b.id === recentId} onOpen={onEdit} typeTag={t["type_" + b.type]} sub={b.detail} />)}</Card></>); }
 function Capture({ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto, openWhatsapp, recent }) {
   return (<div style={{ marginTop: 4 }}>
@@ -1223,6 +1274,7 @@ function WalletI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fil
 function NoteI() { return (<svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 8h8M8 12h8M8 16h5" /></svg>); }
 function PlusI() { return (<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>); }
 function ChatI({ big }) { const s = big ? 27 : 21; return (<svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7a8.5 8.5 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5h.5a8.5 8.5 0 0 1 8 8z" /></svg>); }
+function VaultI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" /></svg>); }
 function PlusSm() { return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>); }
 function WaIcon() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z" /></svg>); }
 function SparkIcon() { return (<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#e5484d" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.8 4.9L18.7 9.7l-4.9 1.8L12 16.4l-1.8-4.9L5.3 9.7l4.9-1.8z" /><path d="M19 15l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z" /></svg>); }

@@ -22,6 +22,8 @@ export async function POST() {
     });
     return Response.json({ link_token: r.data.link_token });
   } catch (e) {
-    return Response.json({ error: (e as { message?: string })?.message || "plaid_error" }, { status: 500 });
+    const pd = (e as { response?: { data?: { error_code?: string; error_message?: string } } })?.response?.data;
+    const msg = pd?.error_code ? `${pd.error_code}: ${pd.error_message || ""}` : (e as { message?: string })?.message || "plaid_error";
+    return Response.json({ error: msg }, { status: 500 });
   }
 }

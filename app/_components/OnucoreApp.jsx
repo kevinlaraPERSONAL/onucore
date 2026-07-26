@@ -76,7 +76,7 @@ const STR = {
     money_topay: "To pay", seg_txns: "Activity", seg_cats: "Categories", seg_accts: "Accounts", money_add: "Add income / expense", report: "Accountant report", none_txns: "Nothing here yet.",
     seg_subs: "Subscriptions", sub_new: "New subscription", sub_cycle: "Billing", sub_monthly: "Monthly", sub_yearly: "Yearly", sub_weekly: "Weekly", sub_renews: "Renews", sub_permo: "/mo", sub_amonth: "per month", none_subs: "No subscriptions yet.", paid_label: "Paid", sub_name_ph: "Netflix, gym, software…",
     add_income: "Income", add_expense: "Expense", scan_receipt: "Scan receipt", scanning: "Reading receipt…", f_amount: "Amount", f_cat: "Category", f_acct: "Account", f_note: "Note (optional)", f_date: "Date", f_ded: "Tax-deductible", save: "Save", del: "Delete",
-    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.",
+    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Business (Schedule C)", rep_personal: "Personal", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "Personal accounts: not part of Schedule C.",
     ded_full: "Deductible", ded_meals50: "50% deductible", ded_partial: "Business-use only", ded_none: "Not deductible",
     notes_none: "Your notes and ideas appear here.",
     cap_title: "Add anything", cap_sub: "Speak, snap a photo, or type — in any language. onucore files it where it belongs.", cap_speak: "Speak", cap_photo: "Photo reminder", cap_recent: "Just added",
@@ -113,7 +113,7 @@ const STR = {
     money_topay: "Por pagar", seg_txns: "Movimientos", seg_cats: "Categorías", seg_accts: "Cuentas", money_add: "Agregar ingreso / gasto", report: "Reporte para contador", none_txns: "Nada aquí todavía.",
     seg_subs: "Suscripciones", sub_new: "Nueva suscripción", sub_cycle: "Ciclo", sub_monthly: "Mensual", sub_yearly: "Anual", sub_weekly: "Semanal", sub_renews: "Renueva", sub_permo: "/mes", sub_amonth: "al mes", none_subs: "Sin suscripciones aún.", paid_label: "Pagado", sub_name_ph: "Netflix, gym, software…",
     add_income: "Ingreso", add_expense: "Gasto", scan_receipt: "Escanear recibo", scanning: "Leyendo recibo…", f_amount: "Monto", f_cat: "Categoría", f_acct: "Cuenta", f_note: "Nota (opcional)", f_date: "Fecha", f_ded: "Deducible de impuestos", save: "Guardar", del: "Eliminar",
-    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.",
+    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Negocio (Schedule C)", rep_personal: "Personal", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Cuentas personales: no entran al Schedule C.",
     ded_full: "Deducible", ded_meals50: "50% deducible", ded_partial: "Solo uso de negocio", ded_none: "No deducible",
     notes_none: "Tus notas e ideas aparecerán aquí.",
     cap_title: "Agrega lo que sea", cap_sub: "Habla, toma una foto o escribe — en cualquier idioma. onucore lo acomoda donde va.", cap_speak: "Hablar", cap_photo: "Recordatorio con foto", cap_recent: "Recién agregado",
@@ -1037,23 +1037,35 @@ ${JSON.stringify(snapshot)}`;
         <Sheet onClose={() => setReportOpen(false)}>
           {(() => {
             const yT = txns.filter((x) => new Date(x.dateISO).getFullYear() === YEAR);
-            const yInc = yT.filter((x) => x.kind === "income").reduce((s, x) => s + x.amount, 0);
-            const yExp = yT.filter((x) => x.kind === "expense").reduce((s, x) => s + x.amount, 0);
+            const isBiz = (x) => x.account === "business";
+            const sumK = (arr, k) => arr.filter((x) => x.kind === k).reduce((s, x) => s + x.amount, 0);
+            const bizInc = sumK(yT.filter(isBiz), "income");
+            const bizExp = sumK(yT.filter(isBiz), "expense");
+            const persInc = sumK(yT.filter((x) => !isBiz(x)), "income");
+            const persExp = sumK(yT.filter((x) => !isBiz(x)), "expense");
             const yDed = yT.reduce((s, x) => s + dedAmount(x), 0);
+            const netBiz = bizInc - yDed;
+            const yInc = bizInc + persInc;
+            const yExp = bizExp + persExp;
             const lines = (() => { const m = {}; yT.filter((x) => x.kind === "expense").forEach((x) => { const d = dedAmount(x); if (d <= 0) return; const ln = catBy(x.cat).line; m[ln] = (m[ln] || 0) + d; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); })();
             const exportCSV = () => { const head = ["Date", "Type", "Category", "Schedule C", "Account", "Note", "Amount", "Deductible"]; const rows = yT.slice().sort((a, b) => a.dateISO.localeCompare(b.dateISO)).map((x) => [x.dateISO, x.kind, (x.kind === "income" ? incBy(x.cat) : catBy(x.cat))[lang === "es" ? "es" : "en"], x.kind === "expense" ? catBy(x.cat).line : "Income", acctBy(x.account).label, (x.note || "").replace(/"/g, "'"), x.amount.toFixed(2), dedAmount(x).toFixed(2)]); const csv = [head, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n"); try { const b = new Blob([csv], { type: "text/csv" }); const u = URL.createObjectURL(b); const a = document.createElement("a"); a.href = u; a.download = `onucore-finance-${YEAR}.csv`; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
             const shareReport = async () => {
               const title = t.rep_title.replace("{y}", YEAR);
-              const body = [title, `${t.rep_income}: ${money(yInc, loc)}`, `${t.rep_expenses}: ${money(yExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_disc].join("\n");
+              const body = [title, "", t.rep_biz, `${t.rep_biz_income}: ${money(bizInc, loc)}`, `${t.rep_biz_expenses}: ${money(bizExp, loc)}`, `${t.rep_ded}: ${money(yDed, loc)}`, `${t.rep_net}: ${money(netBiz, loc)}`, "", `${t.rep_by}:`, ...lines.map(([ln, amt]) => `• ${ln}: ${money(amt, loc)}`), "", t.rep_personal, `${t.rep_income}: ${money(persInc, loc)}`, `${t.rep_expenses}: ${money(persExp, loc)}`, "", t.rep_disc].join("\n");
               try { if (navigator.share) { await navigator.share({ title, text: body }); return; } throw 0; }
               catch (e) { if (e && e.name === "AbortError") return; try { await navigator.clipboard.writeText(body); setToast({ kind: "ok", text: t.rep_copied }); } catch {} }
             };
             return (<>
               <div style={{ fontSize: 17, fontWeight: 600 }}>{t.rep_title.replace("{y}", YEAR)}</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 16 }}><Sum label={t.rep_income} value={money(yInc, loc)} color={C.green} /><Sum label={t.rep_expenses} value={money(yExp, loc)} color={C.red} /></div>
+              <FieldLabel>{t.rep_biz}</FieldLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_biz_income} value={money(bizInc, loc)} color={C.green} /><Sum label={t.rep_biz_expenses} value={money(bizExp, loc)} color={C.red} /></div>
               <div style={{ background: C.surface2, border: `1px solid ${C.goldSoft}`, borderRadius: 14, padding: "14px 16px", marginTop: 10 }}><div style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.gold }}>{t.rep_ded}</div><div className="num" style={{ fontSize: 28, fontWeight: 300, color: C.gold, marginTop: 4 }}>{money(yDed, loc)}</div></div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 16px", marginTop: 10 }}><span style={{ fontSize: 13, color: C.dim }}>{t.rep_net}</span><span className="num" style={{ fontSize: 18, fontWeight: 600, color: netBiz >= 0 ? C.green : C.red }}>{money(netBiz, loc)}</span></div>
               <FieldLabel>{t.rep_by}</FieldLabel>
-              <div style={cardS}>{lines.map(([ln, amt]) => (<div key={ln} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><span style={{ color: C.dim }}>{ln}</span><span className="num">{money(amt, loc)}</span></div>))}</div>
+              <div style={cardS}>{lines.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>—</div>) : lines.map(([ln, amt]) => (<div key={ln} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><span style={{ color: C.dim }}>{ln}</span><span className="num">{money(amt, loc)}</span></div>))}</div>
+              <FieldLabel>{t.rep_personal}</FieldLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 4 }}><Sum label={t.rep_income} value={money(persInc, loc)} color={C.dim} /><Sum label={t.rep_expenses} value={money(persExp, loc)} color={C.dim} /></div>
+              <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>{t.rep_pers_note}</div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 12, lineHeight: 1.5 }}>ⓘ {t.rep_disc}</div>
               <div style={{ display: "flex", gap: 8, marginTop: 18 }}><button onClick={() => setReportOpen(false)} style={{ ...btnGhost, flex: "0 0 auto", padding: "0 16px", fontSize: 14, whiteSpace: "nowrap" }}>{t.rep_close}</button><button onClick={exportCSV} style={{ ...btnGhost, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, whiteSpace: "nowrap" }}><DownI /> {t.rep_export}</button><button onClick={shareReport} style={{ ...btnGold, flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 14, whiteSpace: "nowrap" }}><ShareI /> {t.rep_share}</button></div>
             </>);

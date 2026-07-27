@@ -282,6 +282,19 @@ export default function AtlasAI() {
         const vv = await supabase.from("vehicles").select("*").order("created_at").limit(1); if (alive && vv.data) setVehicle(vv.data[0] || null);
         const cr = await supabase.from("car_records").select("*").order("created_at", { ascending: false }); if (alive && cr.data) setCarRecords(cr.data);
         if (alive && !briefedRef.current) { briefedRef.current = true; generateBriefing(d.items); }
+        // Silent bank auto-sync (at most every 30 min): the webhook keeps data
+        // fresh server-side; this pulls anything new into the open app.
+        try {
+          const last = Number(window.localStorage.getItem("onucore_last_sync") || 0);
+          if (Date.now() - last > 30 * 60e3) {
+            window.localStorage.setItem("onucore_last_sync", String(Date.now()));
+            fetch("/api/plaid/sync", { method: "POST" }).then(async (r) => {
+              if (!r.ok || !alive) return;
+              const d2 = await db.loadAll(supabase, user.id);
+              if (alive) { setItems(d2.items); setTxns(d2.txns); }
+            }).catch(() => {});
+          }
+        } catch { /* noop */ }
       } catch { if (alive && !briefedRef.current) { briefedRef.current = true; generateBriefing([]); } }
     })();
     return () => { alive = false; };

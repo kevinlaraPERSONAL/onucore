@@ -1,4 +1,5 @@
 import { plaidClient, plaidConfigured } from "@/lib/plaid";
+import { PLAID_WEBHOOK_URL } from "@/lib/plaid-sync";
 import { createClient as createServerSupabase } from "@/lib/supabase/server";
 import { Products, CountryCode } from "plaid";
 
@@ -19,6 +20,7 @@ export async function POST() {
       products: [Products.Transactions],
       country_codes: [CountryCode.Us],
       language: "en",
+      webhook: PLAID_WEBHOOK_URL,
     });
     return Response.json({ link_token: r.data.link_token });
   } catch (e) {

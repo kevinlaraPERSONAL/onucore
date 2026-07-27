@@ -16,10 +16,12 @@ export async function POST(request: Request) {
   if (!user) return Response.json({ error: "unauthorized" }, { status: 401 });
   if (!process.env.ANTHROPIC_API_KEY) return Response.json({ error: "no_api_key" }, { status: 500 });
 
-  let body: { mission?: string };
+  let body: { mission?: string; deep?: boolean };
   try { body = await request.json(); } catch { return Response.json({ error: "invalid_json" }, { status: 400 }); }
   const mission = (body.mission || "").trim();
   if (!mission) return Response.json({ error: "missing_mission" }, { status: 400 });
+  // Default: Haiku (barato); "deep" usa Opus para razonamiento pesado.
+  const MODEL = body.deep ? "claude-opus-4-8" : "claude-haiku-4-5";
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const today = new Date().toISOString().slice(0, 10);
@@ -46,7 +48,7 @@ Reglas:
   let finalText = "";
   for (let i = 0; i < MAX_ITER; i++) {
     const resp = await client.messages.create({
-      model: "claude-haiku-4-5",
+      model: MODEL,
       max_tokens: 4000,
       system: sys,
       tools: TOOL_SCHEMAS as unknown as Anthropic.Messages.Tool[],
@@ -71,7 +73,7 @@ Reglas:
           const q = (output as { query?: string }).query || "";
           try {
             const sub = await client.messages.create({
-              model: "claude-haiku-4-5",
+              model: MODEL,
               max_tokens: 1500,
               tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 } as unknown as Anthropic.Messages.Tool],
               messages: [{ role: "user", content: `Busca en internet y resume en 3-5 frases con datos concretos: ${q}` }],

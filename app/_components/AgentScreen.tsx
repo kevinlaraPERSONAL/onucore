@@ -46,6 +46,7 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ summary: string; steps: Step[] } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [deep, setDeep] = useState(false);
   const es = lang === "es";
 
   const run = async (m: string) => {
@@ -53,7 +54,7 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
     setBusy(true);
     setResult(null);
     try {
-      const r = await fetch("/api/agent/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mission: m }) });
+      const r = await fetch("/api/agent/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mission: m, deep }) });
       const d = await r.json();
       if (d.error) setResult({ summary: es ? `Error: ${d.error}` : `Error: ${d.error}`, steps: [] });
       else setResult({ summary: d.summary || "", steps: d.steps || [] });
@@ -85,6 +86,15 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
           rows={3}
           style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: C.text, fontSize: 15, lineHeight: 1.5, resize: "vertical", fontFamily: SF }}
         />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, paddingLeft: 2 }}>
+          <button onClick={() => setDeep((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 8, background: "transparent", border: "none", cursor: "pointer", fontFamily: SF, padding: 4 }}>
+            <span style={{ width: 34, height: 20, borderRadius: 999, background: deep ? C.gold : C.surface2, border: `1px solid ${deep ? C.gold : C.border}`, position: "relative", transition: "background .2s" }}>
+              <span style={{ position: "absolute", top: 1, left: deep ? 15 : 1, width: 16, height: 16, borderRadius: 999, background: deep ? "#ffffff" : C.mute, transition: "left .2s" }} />
+            </span>
+            <span style={{ fontSize: 12.5, color: deep ? C.gold : C.mute }}>🧠 {es ? "Modo profundo" : "Deep mode"}</span>
+          </button>
+          <span style={{ fontSize: 10.5, color: C.mute }}>{deep ? "Opus 4.8" : "Haiku 4.5"}</span>
+        </div>
         <button
           onClick={() => run(mission)}
           disabled={busy || !mission.trim()}

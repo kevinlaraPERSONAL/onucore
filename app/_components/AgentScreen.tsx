@@ -8,12 +8,22 @@ type Step = { tool: string; input: unknown; output: unknown };
 const TOOL_ES: Record<string, string> = {
   list_txns: "Leer movimientos",
   categorize_txn: "Recategorizar gasto",
+  update_txn: "Actualizar movimiento",
   list_items: "Leer items",
   create_item: "Crear item",
   update_item: "Actualizar item",
+  delete_item: "Borrar item",
+  add_subscription: "Agregar suscripción",
+  add_birthday: "Agregar cumpleaños",
+  add_place: "Agregar lugar",
+  add_car_service: "Agregar servicio del carro",
+  add_tax_form: "Agregar forma fiscal",
   get_balances: "Leer saldos",
   list_tax_forms: "Leer formas fiscales",
+  list_documents: "Leer documentos",
   get_car: "Leer info del carro",
+  get_profile: "Leer perfil",
+  web_search: "Buscar en internet",
   build_tax_package: "Armar paquete fiscal",
 };
 
@@ -23,8 +33,12 @@ const PRESETS = [
   { icon: "📊", label: `Paquete completo para mi contador (${TAX_YEAR})`, mission: `Prepara el paquete COMPLETO para mi preparador de impuestos del año fiscal ${TAX_YEAR}. Usa build_tax_package(${TAX_YEAR}). Devuelve un TEXTO CLARO listo para enviarle a mi contador con: 1) resumen ejecutivo (ingresos negocio, deducible total, utilidad neta, W-2 salarios y retención), 2) deducibles por línea del Schedule C, 3) formas W-2 y 1099 con retenciones, 4) match 1099 vs depósitos (qué falta), 5) millaje del carro y su deducción, 6) documentos guardados. Formato lista, sin markdown, en español. Al final: 'Cualquier duda me avisas.'` },
   { icon: "💵", label: "Revisar mis gastos ambiguos", mission: "Revisa mis gastos de los últimos 14 días en la cuenta 'personal' (Empleado). Si alguno claramente parece de negocio (Uber, gasolina, comida con cliente, software), muévelo a cuenta 'business' con la categoría correcta y márcalo deducible. Explica qué moviste." },
   { icon: "🧾", label: "Deducibles perdidos en Oprinte", mission: "Busca gastos de la cuenta 'business' que estén categorizados como 'personal' y no deducibles. Recategorízalos con la categoría correcta del Schedule C (gas, food, tech, travel, software, office, phone, pro, education) y márcalos deducibles. Sé conservador." },
+  { icon: "🕵️", label: "Suscripciones que no uso", mission: "Revisa mis suscripciones (list_items type=subscription) y mis movimientos de los últimos 60 días. Dime cuáles no he cobrado o que ya no aparecen en Plaid (posiblemente canceladas o no uso). Sugiere cuáles cancelar y cuánto ahorraría al mes." },
   { icon: "📅", label: "Preparar mis biles del mes", mission: "Revisa mis biles (obligation) del próximo mes. Si alguno no tiene fecha o repeat, arréglalo. Dime cuánto suma en total y en qué días caen." },
   { icon: "💼", label: "Estado de Oprinte este mes", mission: "Suma mis ingresos y gastos de la cuenta 'business' de este mes. Compara con el mes anterior. Dime el neto y si estoy creciendo." },
+  { icon: "🍽️", label: "Sugerir lugar para reunión", mission: "Voy a tener una reunión con un cliente en Los Angeles. Revisa mis lugares favoritos (list_items type=place). Sugiere 2-3 opciones y por qué. Si tengo pocos, usa web_search para recomendar restaurantes de negocio bien ubicados en LA (Westside/DTLA)." },
+  { icon: "🚗", label: "Revisar el carro", mission: "Revisa el estado de mi carro con get_car. Dime qué está por vencer en 30 días (aceite, placas, seguro), qué millaje va, y qué me recomiendas hacer. Si el aceite se debe cambiar, agenda un recordatorio (create_item type=reminder) para llamar al mecánico." },
+  { icon: "🌐", label: "Investigar algo en LA", mission: "" },
 ];
 
 export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: string; C: Record<string, string>; SF: string; onApplied?: () => void }) {
@@ -84,7 +98,7 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
         <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: C.dim, marginBottom: 10, textTransform: "uppercase" }}>{es ? "Misiones sugeridas" : "Suggested missions"}</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {PRESETS.map((p) => (
-            <button key={p.label} onClick={() => { setMission(p.mission); run(p.mission); }} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.borderSoft}`, background: C.surface, color: C.text, cursor: busy ? "default" : "pointer", fontFamily: SF, textAlign: "left", opacity: busy ? 0.5 : 1 }}>
+            <button key={p.label} onClick={() => { if (!p.mission) { setMission("Busca en internet: "); return; } setMission(p.mission); run(p.mission); }} disabled={busy} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "12px 14px", borderRadius: 12, border: `1px solid ${C.borderSoft}`, background: C.surface, color: C.text, cursor: busy ? "default" : "pointer", fontFamily: SF, textAlign: "left", opacity: busy ? 0.5 : 1 }}>
               <span style={{ fontSize: 18, lineHeight: 1, flexShrink: 0 }}>{p.icon}</span>
               <span style={{ flex: 1, fontSize: 14 }}>{p.label}</span>
               <span style={{ color: C.mute, fontSize: 16 }}>›</span>

@@ -122,6 +122,127 @@ export const TOOL_SCHEMAS = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "delete_item",
+    description: "Borra un item por id (task, event, obligation, note, subscription, birthday, place, journal).",
+    input_schema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+  },
+  {
+    name: "update_txn",
+    description: "Actualiza campos de un movimiento (amount, note, date_iso, miles). Para categoría/cuenta/deducible usa categorize_txn.",
+    input_schema: {
+      type: "object",
+      required: ["id"],
+      properties: {
+        id: { type: "number" },
+        amount: { type: "number" },
+        note: { type: "string" },
+        date_iso: { type: "string" },
+        miles: { type: "number", description: "Millas de negocio (para el metodo de millaje del carro)" },
+      },
+    },
+  },
+  {
+    name: "add_subscription",
+    description: "Guarda una suscripcion recurrente (Netflix, Spotify, gimnasio…). dateLabel: monthly|yearly|weekly. dateISO: próxima renovación.",
+    input_schema: {
+      type: "object",
+      required: ["title", "amount"],
+      properties: {
+        title: { type: "string" },
+        amount: { type: "number" },
+        date_label: { type: "string", enum: ["monthly", "yearly", "weekly"] },
+        date_iso: { type: "string" },
+        area: { type: "string", enum: ["personal", "work"] },
+      },
+    },
+  },
+  {
+    name: "add_birthday",
+    description: "Guarda un cumpleaños/aniversario. mmdd formato MM-DD (ej. '03-15').",
+    input_schema: {
+      type: "object",
+      required: ["name", "mmdd"],
+      properties: {
+        name: { type: "string" },
+        mmdd: { type: "string", pattern: "^\\d{2}-\\d{2}$" },
+        relation: { type: "string", description: "Ej. mamá, hermano, cliente" },
+      },
+    },
+  },
+  {
+    name: "add_place",
+    description: "Guarda un lugar favorito (restaurante, café, coworking, etc).",
+    input_schema: {
+      type: "object",
+      required: ["title"],
+      properties: {
+        title: { type: "string" },
+        category: { type: "string", enum: ["restaurante", "cafe", "bar", "coworking", "evento", "otro"] },
+        detail: { type: "string", description: "Dirección, qué pedir, notas" },
+        area: { type: "string", enum: ["personal", "work"] },
+      },
+    },
+  },
+  {
+    name: "add_car_service",
+    description: "Guarda un servicio o recordatorio del carro (aceite, placas, seguro, llantas, frenos, inspección).",
+    input_schema: {
+      type: "object",
+      required: ["kind"],
+      properties: {
+        kind: { type: "string", enum: ["oil", "registration", "insurance", "tires", "brakes", "inspection", "service", "note"] },
+        title: { type: "string" },
+        date_iso: { type: "string", description: "Cuándo se hizo" },
+        due_iso: { type: "string", description: "Próxima fecha" },
+        mileage: { type: "number" },
+        due_mileage: { type: "number" },
+        cost: { type: "number" },
+        note: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "add_tax_form",
+    description: "Guarda una forma fiscal (W-2, 1099-NEC, 1099-MISC, 1099-K, otra).",
+    input_schema: {
+      type: "object",
+      required: ["kind", "year", "payer"],
+      properties: {
+        kind: { type: "string" },
+        year: { type: "number" },
+        payer: { type: "string" },
+        amount: { type: "number" },
+        withheld: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_profile",
+    description: "Lee el perfil del usuario (nombre, ciudad, ocupación, etc) para personalizar respuestas.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "list_documents",
+    description: "Lista los documentos guardados en la Bóveda del usuario (nombre + nota). No devuelve el contenido, solo el índice.",
+    input_schema: {
+      type: "object",
+      properties: {
+        category: { type: "string", enum: ["tax", "receipt", "insurance", "id", "media", "other"] },
+      },
+    },
+  },
+  {
+    name: "web_search",
+    description: "Busca en internet para info externa (precios, horarios, direcciones, trámites en Los Angeles, noticias, etc). Úsalo cuando el usuario pregunte algo que no está en sus datos.",
+    input_schema: {
+      type: "object",
+      required: ["query"],
+      properties: {
+        query: { type: "string", description: "Búsqueda en lenguaje natural" },
+      },
+    },
+  },
+  {
     name: "build_tax_package",
     description: "Arma el paquete COMPLETO para el preparador de impuestos del año fiscal indicado. Devuelve un objeto con: ingresos por cuenta (Empleado W-2 vs Contratista/Oprinte 1099), gastos totales del negocio, DEDUCIBLE TOTAL, deducible desglosado por línea del Schedule C, utilidad neta de Oprinte, formas W-2/1099 con retenciones, match 1099-vs-depósitos por pagador (cuánto llegó, cuánto falta), millaje de negocio del año (millas totales × $0.70/mi = deducción), lista de documentos fiscales guardados en la Bóveda, y datos del vehículo (marca/modelo/placa). Usa esto DIRECTAMENTE en vez de leer todo por separado cuando el usuario pida su reporte fiscal.",
     input_schema: {
@@ -216,6 +337,101 @@ export async function runTool(db: DB, userId: string, name: string, input: any):
         db.from("car_records").select("id,kind,title,date_iso,due_iso,mileage,due_mileage,cost,note").eq("user_id", userId).order("due_iso", { ascending: true }),
       ]);
       return { vehicle: v?.[0] || null, records: r || [] };
+    }
+    case "delete_item": {
+      if (!input?.id) return { error: "id required" };
+      const { error } = await db.from("items").delete().eq("id", input.id).eq("user_id", userId);
+      if (error) return { error: error.message };
+      return { ok: true };
+    }
+    case "update_txn": {
+      if (!input?.id) return { error: "id required" };
+      const patch: any = {};
+      if (typeof input.amount === "number") patch.amount = input.amount;
+      if (typeof input.note === "string") patch.note = input.note;
+      if (input.date_iso) patch.date_iso = input.date_iso;
+      if (typeof input.miles === "number") patch.miles = input.miles;
+      if (Object.keys(patch).length === 0) return { error: "nothing to update" };
+      const { error } = await db.from("txns").update(patch).eq("id", input.id).eq("user_id", userId);
+      if (error) return { error: error.message };
+      return { ok: true };
+    }
+    case "add_subscription": {
+      if (!input?.title || typeof input?.amount !== "number") return { error: "title and amount required" };
+      const { data, error } = await db.from("items").insert({
+        user_id: userId, type: "subscription", title: input.title, amount: input.amount,
+        area: input.area === "work" ? "work" : "personal",
+        date_iso: input.date_iso || null,
+        date_label: input.date_label || "monthly",
+        source: "agent", done: false,
+      }).select("id").single();
+      if (error) return { error: error.message };
+      return { ok: true, id: data?.id };
+    }
+    case "add_birthday": {
+      if (!input?.name || !/^\d{2}-\d{2}$/.test(input?.mmdd || "")) return { error: "name and mmdd (MM-DD) required" };
+      const [m, d] = input.mmdd.split("-").map(Number);
+      const t = new Date(); t.setHours(0, 0, 0, 0);
+      let y = t.getFullYear(); const cand = new Date(y, m - 1, d);
+      if (cand < t) y++;
+      const nextISO = `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const { data, error } = await db.from("items").insert({
+        user_id: userId, type: "birthday", title: input.name, area: "personal",
+        person: input.relation || "", date_iso: nextISO, date_label: input.mmdd,
+        source: "agent", done: false,
+      }).select("id").single();
+      if (error) return { error: error.message };
+      return { ok: true, id: data?.id, next: nextISO };
+    }
+    case "add_place": {
+      if (!input?.title) return { error: "title required" };
+      const { data, error } = await db.from("items").insert({
+        user_id: userId, type: "place", title: input.title,
+        area: input.area === "work" ? "work" : "personal",
+        person: input.category || "otro", detail: input.detail || "",
+        source: "agent", done: false,
+      }).select("id").single();
+      if (error) return { error: error.message };
+      return { ok: true, id: data?.id };
+    }
+    case "add_car_service": {
+      if (!input?.kind) return { error: "kind required" };
+      const row: any = {
+        user_id: userId, kind: input.kind, title: input.title || null,
+        date_iso: input.date_iso || null, due_iso: input.due_iso || null,
+        mileage: typeof input.mileage === "number" ? input.mileage : null,
+        due_mileage: typeof input.due_mileage === "number" ? input.due_mileage : null,
+        cost: typeof input.cost === "number" ? input.cost : null,
+        note: input.note || null,
+      };
+      const { data, error } = await db.from("car_records").insert(row).select("id").single();
+      if (error) return { error: error.message };
+      return { ok: true, id: data?.id };
+    }
+    case "add_tax_form": {
+      if (!input?.kind || !input?.year || !input?.payer) return { error: "kind, year, payer required" };
+      const { data, error } = await db.from("tax_forms").insert({
+        user_id: userId, kind: input.kind, year: input.year, payer: input.payer,
+        amount: typeof input.amount === "number" ? input.amount : 0,
+        withheld: typeof input.withheld === "number" ? input.withheld : 0,
+      }).select("id").single();
+      if (error) return { error: error.message };
+      return { ok: true, id: data?.id };
+    }
+    case "get_profile": {
+      const { data } = await db.from("profiles").select("name,nickname,role,business,city,tz,about,goals,people").eq("id", userId).maybeSingle();
+      return { profile: data || null };
+    }
+    case "list_documents": {
+      let q = db.from("documents").select("id,name,category,mime,note,created_at").eq("user_id", userId).order("created_at", { ascending: false });
+      if (input?.category) q = q.eq("category", input.category);
+      const { data } = await q;
+      return { documents: data || [] };
+    }
+    case "web_search": {
+      // Signal to the caller (agent route) that this needs Claude's native web_search tool.
+      // The runTool caller isolates the search into a separate Claude call.
+      return { __needs_web_search: true, query: input?.query || "" };
     }
     case "build_tax_package": {
       const year = Number(input?.year);

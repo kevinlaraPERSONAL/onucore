@@ -959,6 +959,9 @@ ${JSON.stringify(snapshot)}`;
         </div>
       </div>
 
+      {!desktop && tab !== "agent" && (
+        <button onClick={() => setTab("agent")} aria-label={t.nav_agent} style={{ position: "fixed", right: 16, bottom: 90, zIndex: 31, width: 48, height: 48, borderRadius: 999, border: "none", background: C.red, color: "#ffffff", fontSize: 22, cursor: "pointer", boxShadow: "0 10px 30px rgba(229,72,77,.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>🤖</button>
+      )}
       {!desktop && (
       <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, display: "flex", justifyContent: "center" }}>
         <div style={{ width: "100%", maxWidth: navMax, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "8px 10px calc(8px + env(safe-area-inset-bottom))", background: "rgba(26,26,31,.92)", backdropFilter: "blur(16px)", borderTop: `1px solid ${C.borderSoft}` }}>

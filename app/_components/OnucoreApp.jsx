@@ -752,17 +752,19 @@ ${JSON.stringify(snapshot)}`;
     sItems.filter((i) => i.type === "event" && i.dateISO).forEach((e) => { (evByDay[e.dateISO] = evByDay[e.dateISO] || []).push(e); });
     Object.entries(evByDay).forEach(([d, evs]) => { const du = daysUntil(d); if (evs.length >= 2 && du != null && du >= 0 && du <= 7) out.push({ kind: "conflict", color: C.red, text: es ? `${evs.length} citas el ${fmtDate(d, lang)} — revisa que no se empalmen` : `${evs.length} appointments on ${fmtDate(d, lang)} — check for overlaps` }); });
     sItems.filter((i) => i.type === "obligation").forEach((o) => { const du = daysUntil(o.dateISO); if (du != null && du >= 0 && du <= 3 && !o.done) out.push({ kind: "bill", color: C.gold, text: (es ? `${o.title} vence ${du <= 0 ? "hoy" : "en " + du + " día(s)"}` : `${o.title} due ${du <= 0 ? "today" : "in " + du + " day(s)"}`) + (o.amount ? ` · ${money(o.amount, loc)}` : "") }); });
-    // Car: services/renewals due soon or overdue.
-    const KIND_ES = { oil: "Cambio de aceite", registration: "Placas", insurance: "Seguro del carro", tires: "Llantas", brakes: "Frenos", inspection: "Inspección", service: "Servicio del carro" };
-    const KIND_EN = { oil: "Oil change", registration: "Registration", insurance: "Car insurance", tires: "Tires", brakes: "Brakes", inspection: "Inspection", service: "Car service" };
-    carRecords.filter((r) => r.due_iso).forEach((r) => {
-      const du = daysUntil(r.due_iso);
-      if (du == null || du > 30) return;
-      const nm = r.title || (es ? KIND_ES : KIND_EN)[r.kind] || (es ? "Servicio del carro" : "Car service");
-      const when = du < 0 ? (es ? `venció hace ${-du} día(s)` : `overdue by ${-du} day(s)`) : du === 0 ? (es ? "vence hoy" : "due today") : es ? `vence en ${du} día(s)` : `due in ${du} day(s)`;
-      out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: `🚗 ${nm} ${when}` });
-    });
-    if (vehicle && vehicle.insurance_expiry) { const du = daysUntil(vehicle.insurance_expiry); if (du != null && du <= 30) out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: es ? `🚗 Seguro del carro ${du < 0 ? "venció" : du === 0 ? "vence hoy" : `vence en ${du} día(s)`}` : `🚗 Car insurance ${du < 0 ? "expired" : du === 0 ? "expires today" : `expires in ${du} day(s)`}` }); }
+    // Car alerts: the car is part of the user's PERSONAL life → hidden in Work mode.
+    if (scope !== "work") {
+      const KIND_ES = { oil: "Cambio de aceite", registration: "Placas", insurance: "Seguro del carro", tires: "Llantas", brakes: "Frenos", inspection: "Inspección", service: "Servicio del carro" };
+      const KIND_EN = { oil: "Oil change", registration: "Registration", insurance: "Car insurance", tires: "Tires", brakes: "Brakes", inspection: "Inspection", service: "Car service" };
+      carRecords.filter((r) => r.due_iso).forEach((r) => {
+        const du = daysUntil(r.due_iso);
+        if (du == null || du > 30) return;
+        const nm = r.title || (es ? KIND_ES : KIND_EN)[r.kind] || (es ? "Servicio del carro" : "Car service");
+        const when = du < 0 ? (es ? `venció hace ${-du} día(s)` : `overdue by ${-du} day(s)`) : du === 0 ? (es ? "vence hoy" : "due today") : es ? `vence en ${du} día(s)` : `due in ${du} day(s)`;
+        out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: `🚗 ${nm} ${when}` });
+      });
+      if (vehicle && vehicle.insurance_expiry) { const du = daysUntil(vehicle.insurance_expiry); if (du != null && du <= 30) out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: es ? `🚗 Seguro del carro ${du < 0 ? "venció" : du === 0 ? "vence hoy" : `vence en ${du} día(s)`}` : `🚗 Car insurance ${du < 0 ? "expired" : du === 0 ? "expires today" : `expires in ${du} day(s)`}` }); }
+    }
     // IRS quarterly estimated-tax dates coming up (within 7 days).
     { const yq = new Date().getFullYear(); const qd = [`${yq}-04-15`, `${yq}-06-15`, `${yq}-09-15`, `${yq + 1}-01-15`].find((d) => { const du = daysUntil(d); return du != null && du >= 0 && du <= 7; }); if (qd) out.push({ kind: "tax", color: C.red, text: es ? `💵 Pago trimestral de impuestos: ${fmtDate(qd, lang)}` : `💵 Quarterly estimated tax due ${fmtDate(qd, lang)}` }); }
     // Subscriptions renewing in the next 3 days.

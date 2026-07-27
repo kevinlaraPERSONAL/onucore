@@ -65,7 +65,7 @@ const ACCOUNTS = [{ k: "personal", label: "Empleado", type: "bank" }, { k: "busi
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -102,7 +102,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -246,6 +246,8 @@ export default function AtlasAI() {
   const [docs, setDocs] = useState([]);
   const [docUp, setDocUp] = useState(null);
   const docFileRef = useRef(null);
+  const [mediaUrls, setMediaUrls] = useState({});
+  const [mediaView, setMediaView] = useState(null);
   const [taxForms, setTaxForms] = useState([]);
   const [formDraft, setFormDraft] = useState(null);
   const [vehicle, setVehicle] = useState(null);
@@ -439,9 +441,24 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   const newSub = () => setItemDraft({ id: uid(), type: "subscription", area: "personal", title: "", amount: "", dateISO: "", dateLabel: "monthly", _new: true });
   const newObl = () => setItemDraft({ id: uid(), type: "obligation", area: "personal", title: "", amount: null, dateISO: todayISO(), repeat: "monthly", done: false, _new: true });
   const refreshDocs = async () => { const { data } = await supabase.from("documents").select("*").order("created_at", { ascending: false }); setDocs(data || []); };
-  const onDocFile = (e) => { const f = e.target.files && e.target.files[0]; if (f) setDocUp({ file: f, name: f.name, category: "tax" }); e.target.value = ""; };
+  const isMedia = (d) => ((d.mime || "").startsWith("image/") || (d.mime || "").startsWith("video/"));
+  // Signed thumbnails for the photo/video grid (private bucket → 1h links).
+  useEffect(() => {
+    (async () => {
+      const media = docs.filter(isMedia);
+      if (!media.length) { setMediaUrls({}); return; }
+      try {
+        const { data } = await supabase.storage.from("documents").createSignedUrls(media.map((d) => d.path), 3600);
+        const m = {};
+        (data || []).forEach((r) => { if (r.signedUrl && r.path) m[r.path] = r.signedUrl; });
+        setMediaUrls(m);
+      } catch { /* noop */ }
+    })();
+  }, [docs, supabase]);
+  const onDocFile = (e) => { const f = e.target.files && e.target.files[0]; if (f) setDocUp({ file: f, name: f.name, category: f.type.startsWith("image/") || f.type.startsWith("video/") ? "media" : "tax" }); e.target.value = ""; };
   const uploadDoc = async () => {
     if (!docUp || docUp.busy) return;
+    if (docUp.file.size > 50 * 1024 * 1024) { setToast({ kind: "warn", text: lang === "es" ? "Máximo 50 MB por archivo (por ahora)" : "Max 50 MB per file (for now)" }); return; }
     const sess = (await supabase.auth.getSession()).data.session;
     const uid2 = userId || (sess && sess.user.id);
     if (!uid2) return;
@@ -774,7 +791,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
           {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
-          {tab === "vault" && <Vault {...{ t, lang, docs, onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
+          {tab === "vault" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), recent }} />}
@@ -1011,7 +1028,7 @@ ${JSON.stringify(snapshot)}`;
           <div style={{ fontSize: 16, fontWeight: 600 }}>{t.doc_upload}</div>
           <div style={{ fontSize: 13, color: C.dim, marginTop: 4, wordBreak: "break-all" }}>{docUp.name}</div>
           <FieldLabel>{lang === "es" ? "Categoría" : "Category"}</FieldLabel>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]].map(([k, lbl]) => <button key={k} type="button" onClick={() => setDocUp((u) => ({ ...u, category: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${docUp.category === k ? C.gold : C.border}`, background: docUp.category === k ? "rgba(229,72,77,.12)" : "transparent", color: docUp.category === k ? C.gold : C.dim }}>{lbl}</button>)}</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["media", t.cat_media], ["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]].map(([k, lbl]) => <button key={k} type="button" onClick={() => setDocUp((u) => ({ ...u, category: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${docUp.category === k ? C.gold : C.border}`, background: docUp.category === k ? "rgba(229,72,77,.12)" : "transparent", color: docUp.category === k ? C.gold : C.dim }}>{lbl}</button>)}</div>
           <button onClick={uploadDoc} disabled={docUp.busy} style={{ ...btnGold, width: "100%", marginTop: 22, opacity: docUp.busy ? 0.6 : 1 }}>{docUp.busy ? "…" : t.doc_upload}</button>
         </Sheet>
       )}
@@ -1098,6 +1115,21 @@ ${JSON.stringify(snapshot)}`;
             <button onClick={saveCarRecord} style={{ ...btnGold, flex: 1 }}>{t.save}</button>
           </div>
         </Sheet>
+      )}
+      {mediaView && (
+        <div onClick={() => setMediaView(null)} style={{ position: "fixed", inset: 0, zIndex: 120, background: "rgba(0,0,0,.93)", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+          <button onClick={() => setMediaView(null)} style={{ position: "absolute", top: 16, right: 18, zIndex: 2, background: "rgba(255,255,255,.1)", border: "none", color: "#ffffff", width: 38, height: 38, borderRadius: 999, fontSize: 16, cursor: "pointer", fontFamily: SF }}>✕</button>
+          {(mediaView.doc.mime || "").startsWith("video/") ? (
+            <video src={mediaView.url} controls autoPlay playsInline onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "82%", borderRadius: 12 }} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={mediaView.url} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "82%", borderRadius: 12, objectFit: "contain" }} />
+          )}
+          <div style={{ position: "absolute", bottom: 22, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 14, padding: "0 20px" }} onClick={(e) => e.stopPropagation()}>
+            <span style={{ color: C.dim, fontSize: 12.5, maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mediaView.doc.name}</span>
+            <button onClick={() => { if (typeof window !== "undefined" && window.confirm((lang === "es" ? "¿Borrar " : "Delete ") + mediaView.doc.name + "?")) { deleteDoc(mediaView.doc); setMediaView(null); } }} style={{ background: "transparent", border: "none", color: C.red, fontSize: 16, cursor: "pointer" }}>🗑</button>
+          </div>
+        </div>
       )}
       {moreOpen && (
         <Sheet onClose={() => setMoreOpen(false)}>
@@ -1316,16 +1348,37 @@ function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg,
     {fseg === "subs" && (() => { const norm = (s) => { const a = Number(s.amount) || 0; return s.dateLabel === "yearly" ? a / 12 : s.dateLabel === "weekly" ? (a * 52) / 12 : a; }; const moTotal = subs.reduce((sum, s) => sum + norm(s), 0); const cyl = (s) => (s.dateLabel === "yearly" ? t.sub_yearly : s.dateLabel === "weekly" ? t.sub_weekly : t.sub_monthly); return (<><PlaidBankSection lang={lang} C={C} SF={SF} /><div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", padding: "2px 2px 12px" }}><span style={{ fontSize: 12.5, color: C.dim }}>{subs.length} {t.seg_subs.toLowerCase()}</span><span className="num" style={{ fontSize: 22, fontWeight: 600 }}>{money(moTotal, loc)} <span style={{ fontSize: 12, color: C.mute, fontWeight: 400 }}>{t.sub_amonth}</span></span></div><Card>{subs.length === 0 ? <Empty>{t.none_subs}</Empty> : subs.map((s) => (<div key={s.id} onClick={() => onEditItem(s)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: s.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}><SubLogo logo={s.logo} title={s.title} C={C} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{cyl(s)}{s.dateISO ? ` · ${t.sub_renews} ${fmtDate(nextRenewal(s.dateISO, s.dateLabel), lang)}` : ""}</div></div></div><div className="num" style={{ fontSize: 15, flexShrink: 0 }}>{money(Number(s.amount) || 0, loc)}</div></div>))}</Card></>); })()}
   </>);
 }
-function Vault({ t, lang, docs, onUpload, onOpen, onDelete }) {
+function Vault({ t, lang, docs, mediaUrls, isMedia, onView, onUpload, onOpen, onDelete }) {
   const [cat, setCat] = useState("all");
+  const media = docs.filter(isMedia);
+  const files = docs.filter((d) => !isMedia(d));
   const CATS2 = [["all", t.doc_all], ["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]];
-  const catName = (k) => ({ tax: t.cat_tax, receipt: t.cat_receipt, insurance: t.cat_insurance, id: t.cat_id, other: t.cat_other }[k] || k);
-  const list = cat === "all" ? docs : docs.filter((d) => d.category === cat);
+  const catName = (k) => ({ media: t.cat_media, tax: t.cat_tax, receipt: t.cat_receipt, insurance: t.cat_insurance, id: t.cat_id, other: t.cat_other }[k] || k);
+  const list = cat === "all" ? files : files.filter((d) => d.category === cat);
   const kb = (n) => (n == null ? "" : n < 1024 ? n + " B" : n < 1048576 ? Math.round(n / 1024) + " KB" : (n / 1048576).toFixed(1) + " MB");
   return (<>
-    <div style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 6, paddingBottom: 2 }}>{CATS2.map(([k, lbl]) => <button key={k} onClick={() => setCat(k)} style={{ flexShrink: 0, padding: "7px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: cat === k ? 600 : 400, background: cat === k ? C.surface2 : "transparent", color: cat === k ? C.text : C.mute, border: `1px solid ${cat === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>)}</div>
-    <button onClick={onUpload} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 14, padding: "13px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600 }}>＋ {t.doc_upload}</button>
-    <div style={{ marginTop: 14 }}>
+    <button onClick={onUpload} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 10, padding: "13px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600 }}>＋ {t.doc_upload}</button>
+    {media.length > 0 && (<>
+      <SectionLabel>{t.vault_media}</SectionLabel>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
+        {media.map((d) => {
+          const u = mediaUrls[d.path];
+          const isVid = (d.mime || "").startsWith("video/");
+          return (
+            <div key={d.id} onClick={() => onView(d)} style={{ position: "relative", aspectRatio: "1", borderRadius: 12, overflow: "hidden", background: C.surface2, border: `1px solid ${C.borderSoft}`, cursor: "pointer" }}>
+              {u ? (isVid ? (<video src={u} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={u} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              )) : null}
+              {isVid && (<span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, color: "#ffffff", textShadow: "0 1px 8px rgba(0,0,0,.7)" }}>▶</span>)}
+            </div>
+          );
+        })}
+      </div>
+    </>)}
+    <SectionLabel>{t.vault_docs}</SectionLabel>
+    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>{CATS2.map(([k, lbl]) => <button key={k} onClick={() => setCat(k)} style={{ flexShrink: 0, padding: "7px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: cat === k ? 600 : 400, background: cat === k ? C.surface2 : "transparent", color: cat === k ? C.text : C.mute, border: `1px solid ${cat === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>)}</div>
+    <div style={{ marginTop: 12 }}>
       {list.length === 0 ? <div style={{ padding: "24px 14px", textAlign: "center", color: C.mute, fontSize: 13.5 }}>{t.doc_none}</div>
         : list.map((d) => (<div key={d.id} className="rise" onClick={() => onOpen(d)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 9, cursor: "pointer" }}>
           <span style={{ width: 36, height: 36, borderRadius: 9, background: C.surface2, border: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "center", color: C.gold, flexShrink: 0 }}><DocI /></span>

@@ -66,9 +66,9 @@ export async function POST() {
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const msg = await client.messages.create({
         model: "claude-haiku-4-5",
-        max_tokens: 500,
-        system: "Eres onucore AI, asistente personal. Escribe en español, segunda persona (tú), tono cálido y directo, SIN el signo — (guion largo). Formato: una frase de apertura (¿qué tan cargada viene la semana?) y luego un plan DÍA POR DÍA en líneas cortas empezando con el nombre del día. Sé útil, no repitas obvieces. Máximo ~150 palabras. No inventes citas que no están en los datos.",
-        messages: [{ role: "user", content: `Hoy es ${today} (LA). Esto viene los próximos 7 días:\n${JSON.stringify(days, null, 2)}\n\nArma el plan de la semana para el usuario.` }],
+        max_tokens: 250,
+        system: "Eres onucore AI. Escribe en español, segunda persona (tú), muy CORTO. NADA de markdown (nada de **, ##, guiones de lista). NADA del signo — (guion largo). Formato: 1 frase de apertura (¿qué tal viene la semana?), luego SOLO los días que tienen algo, uno por línea así: 'Lunes: paga renta $900'. NO menciones los días vacíos. Si la semana está tranquila, dilo en 1-2 frases y ya. Máximo 60 palabras.",
+        messages: [{ role: "user", content: `Hoy es ${today} (LA). Solo estos días tienen algo:\n${JSON.stringify(days, null, 2)}\n\nArma el plan corto.` }],
       });
       const text = msg.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("\n").trim();
       if (text) return Response.json({ text, items: bag });

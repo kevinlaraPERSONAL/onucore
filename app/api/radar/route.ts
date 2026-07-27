@@ -98,8 +98,8 @@ export async function POST() {
       const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
       const msg = await client.messages.create({
         model: "claude-haiku-4-5",
-        max_tokens: 400,
-        system: "Eres onucore AI, asistente financiero personal. Escribe 3-4 frases CORTAS en español, en segunda persona (tú), sin jerga y sin signo — (guion largo). Concreto y útil. Empieza con lo más importante: ¿estás gastando más o menos que las semanas anteriores, y en qué? Si algo subió mucho, dilo con nombre y monto. Si nada relevante, di algo breve tipo 'semana tranquila'.",
+        max_tokens: 180,
+        system: "Eres onucore AI. Español, segunda persona (tú), MUY corto: 1-2 frases máximo. Sin markdown, sin el signo — (guion largo), sin exclamaciones. Solo lo esencial: gastaste $X esta semana (más/menos/igual que las $Y usuales) y si algo subió mucho, dilo con nombre y monto. Nada de recomendaciones ni consejos.",
         messages: [{ role: "user", content: JSON.stringify(summary) }],
       });
       const text = msg.content.filter((b) => b.type === "text").map((b) => (b as { text: string }).text).join("\n").trim();

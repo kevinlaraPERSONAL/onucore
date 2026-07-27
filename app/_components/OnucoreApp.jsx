@@ -467,11 +467,12 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     const path = `${uid2}/${uid()}-${docUp.name.replace(/[^\w.\-]+/g, "_")}`;
     const up = await supabase.storage.from("documents").upload(path, docUp.file);
     if (up.error) { setDocUp((u) => ({ ...u, busy: false })); setToast({ kind: "warn", text: up.error.message }); return; }
-    await supabase.from("documents").insert({ user_id: uid2, name: docUp.name, category: docUp.category, path, size: docUp.file.size, mime: docUp.file.type });
+    await supabase.from("documents").insert({ user_id: uid2, name: docUp.name, category: docUp.category, path, size: docUp.file.size, mime: docUp.file.type, note: (docUp.note || "").trim() || null });
     setDocUp(null); refreshDocs(); setToast({ kind: "ok", text: lang === "es" ? "Documento guardado" : "Document saved" });
   };
   const openDoc = async (d) => { const { data } = await supabase.storage.from("documents").createSignedUrl(d.path, 120); if (data && data.signedUrl && typeof window !== "undefined") window.open(data.signedUrl, "_blank"); };
   const deleteDoc = async (d) => { await supabase.storage.from("documents").remove([d.path]); await supabase.from("documents").delete().eq("id", d.id); refreshDocs(); };
+  const saveDocNote = async (d, note) => { await supabase.from("documents").update({ note: note || null }).eq("id", d.id); refreshDocs(); };
   const refreshForms = async () => { const { data } = await supabase.from("tax_forms").select("*").order("created_at", { ascending: false }); setTaxForms(data || []); };
   const saveTaxForm = async () => {
     if (!formDraft) return;
@@ -1031,6 +1032,8 @@ ${JSON.stringify(snapshot)}`;
           <div style={{ fontSize: 13, color: C.dim, marginTop: 4, wordBreak: "break-all" }}>{docUp.name}</div>
           <FieldLabel>{lang === "es" ? "Categoría" : "Category"}</FieldLabel>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["media", t.cat_media], ["tax", t.cat_tax], ["receipt", t.cat_receipt], ["insurance", t.cat_insurance], ["id", t.cat_id], ["other", t.cat_other]].map(([k, lbl]) => <button key={k} type="button" onClick={() => setDocUp((u) => ({ ...u, category: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${docUp.category === k ? C.gold : C.border}`, background: docUp.category === k ? "rgba(229,72,77,.12)" : "transparent", color: docUp.category === k ? C.gold : C.dim }}>{lbl}</button>)}</div>
+          <FieldLabel>{lang === "es" ? "Texto (opcional)" : "Text (optional)"}</FieldLabel>
+          <input value={docUp.note || ""} onChange={(e) => setDocUp((u) => ({ ...u, note: e.target.value }))} placeholder={lang === "es" ? "Ej. Licencia de conducir" : "e.g. Driver's license"} style={obIn} />
           <button onClick={uploadDoc} disabled={docUp.busy} style={{ ...btnGold, width: "100%", marginTop: 22, opacity: docUp.busy ? 0.6 : 1 }}>{docUp.busy ? "…" : t.doc_upload}</button>
         </Sheet>
       )}
@@ -1128,8 +1131,9 @@ ${JSON.stringify(snapshot)}`;
             <img src={mediaView.url} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "100%", maxHeight: "82%", borderRadius: 12, objectFit: "contain" }} />
           )}
           <div style={{ position: "absolute", bottom: 22, left: 0, right: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 14, padding: "0 20px" }} onClick={(e) => e.stopPropagation()}>
-            <span style={{ color: C.dim, fontSize: 12.5, maxWidth: "70%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mediaView.doc.name}</span>
-            <button onClick={() => { if (typeof window !== "undefined" && window.confirm((lang === "es" ? "¿Borrar " : "Delete ") + mediaView.doc.name + "?")) { deleteDoc(mediaView.doc); setMediaView(null); } }} style={{ background: "transparent", border: "none", color: C.red, fontSize: 16, cursor: "pointer" }}>🗑</button>
+            <span style={{ color: mediaView.doc.note ? C.text : C.dim, fontSize: 13, maxWidth: "62%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{mediaView.doc.note || mediaView.doc.name}</span>
+            <button onClick={() => { if (typeof window === "undefined") return; const nv = window.prompt(lang === "es" ? "Texto de esta foto/video:" : "Text for this photo/video:", mediaView.doc.note || ""); if (nv !== null) { const clean = nv.trim(); saveDocNote(mediaView.doc, clean); setMediaView((m) => (m ? { ...m, doc: { ...m.doc, note: clean || null } } : m)); } }} style={{ background: "transparent", border: "none", color: C.gold, fontSize: 15, cursor: "pointer" }}>✏️</button>
+            <button onClick={() => { if (typeof window !== "undefined" && window.confirm((lang === "es" ? "¿Borrar " : "Delete ") + (mediaView.doc.note || mediaView.doc.name) + "?")) { deleteDoc(mediaView.doc); setMediaView(null); } }} style={{ background: "transparent", border: "none", color: C.red, fontSize: 16, cursor: "pointer" }}>🗑</button>
           </div>
         </div>
       )}
@@ -1367,12 +1371,15 @@ function Vault({ t, lang, docs, mediaUrls, isMedia, onView, onUpload, onOpen, on
           const u = mediaUrls[d.path];
           const isVid = (d.mime || "").startsWith("video/");
           return (
-            <div key={d.id} onClick={() => onView(d)} style={{ position: "relative", aspectRatio: "1", borderRadius: 12, overflow: "hidden", background: C.surface2, border: `1px solid ${C.borderSoft}`, cursor: "pointer" }}>
-              {u ? (isVid ? (<video src={u} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={u} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              )) : null}
-              {isVid && (<span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, color: "#ffffff", textShadow: "0 1px 8px rgba(0,0,0,.7)" }}>▶</span>)}
+            <div key={d.id} onClick={() => onView(d)} style={{ cursor: "pointer", minWidth: 0 }}>
+              <div style={{ position: "relative", aspectRatio: "1", borderRadius: 12, overflow: "hidden", background: C.surface2, border: `1px solid ${C.borderSoft}` }}>
+                {u ? (isVid ? (<video src={u} muted playsInline preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover" }} />) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={u} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                )) : null}
+                {isVid && (<span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, color: "#ffffff", textShadow: "0 1px 8px rgba(0,0,0,.7)" }}>▶</span>)}
+              </div>
+              {d.note ? (<div style={{ fontSize: 11, color: C.dim, marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>{d.note}</div>) : null}
             </div>
           );
         })}

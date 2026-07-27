@@ -92,15 +92,35 @@ function profileFromRow(r: Any) {
 }
 
 // ---------- reads / writes ----------
+// Supabase caps a plain select at 1000 rows, which silently truncated older
+// transactions once Plaid started importing a full fiscal year. Page through
+// until the table is exhausted so totals and tax reports are complete.
+const PAGE = 1000;
+async function fetchAll(supabase: SupabaseClient, table: string): Promise<Any[]> {
+  const out: Any[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from(table)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE - 1);
+    if (error) break;
+    const rows = data ?? [];
+    out.push(...rows);
+    if (rows.length < PAGE || out.length >= 20000) break;
+  }
+  return out;
+}
+
 export async function loadAll(supabase: SupabaseClient, userId: string) {
-  const [itemsRes, txnsRes, profRes] = await Promise.all([
-    supabase.from("items").select("*").order("created_at", { ascending: false }),
-    supabase.from("txns").select("*").order("created_at", { ascending: false }),
+  const [itemRows, txnRows, profRes] = await Promise.all([
+    fetchAll(supabase, "items"),
+    fetchAll(supabase, "txns"),
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
   ]);
   return {
-    items: (itemsRes.data ?? []).map(itemFromRow),
-    txns: (txnsRes.data ?? []).map(txnFromRow),
+    items: itemRows.map(itemFromRow),
+    txns: txnRows.map(txnFromRow),
     profile: profRes.data ? profileFromRow(profRes.data) : null,
   };
 }

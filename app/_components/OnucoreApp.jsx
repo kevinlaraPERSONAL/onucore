@@ -9,6 +9,7 @@ import NudgesCard from "./NudgesCard";
 import BalanceCard from "./BalanceCard";
 import MonthReportCard from "./MonthReportCard";
 import AgentScreen from "./AgentScreen";
+import SecretsVault from "./SecretsVault";
 import SubLogo from "./SubLogo";
 
 // onucore AI — App consolidada (mobile-first)
@@ -18,7 +19,7 @@ import SubLogo from "./SubLogo";
 const C = {
   bg: "#1A1A1F", surface: "#242429", surface2: "#2C2C33", border: "#3B3B43", borderSoft: "#312F37",
   text: "#ECEBE7", dim: "#ABACB4", mute: "#7C7D85", gold: "#e5484d", goldSoft: "#a8383c",
-  red: "#e5484d", green: "#8a8b93", google: "#8a8b93", apple: "#8a8b93",
+  red: "#e5484d", green: "#7f9c7a", google: "#8a8b93", apple: "#8a8b93",
 };
 const SF = `-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif`;
 const MODEL = "claude-haiku-4-5";
@@ -241,6 +242,9 @@ export default function AtlasAI() {
   const [reportOpen, setReportOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [calSub, setCalSub] = useState("cal");
+  const [vaultSub, setVaultSub] = useState("files");
+  const [insightsOpen, setInsightsOpen] = useState(() => { if (typeof window !== "undefined") return window.localStorage.getItem("onucore_insights_open") === "1"; return false; });
+  useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("onucore_insights_open", insightsOpen ? "1" : "0"); }, [insightsOpen]);
   const [reportYear, setReportYear] = useState(YEAR);
   // calendar
   const now0 = new Date();
@@ -936,14 +940,26 @@ ${JSON.stringify(snapshot)}`;
           </div>
         )}
         <div style={{ padding: "8px 20px 0" }}>
+          {/* Hoy: primero lo tuyo (briefing, citas, biles); el resto de tarjetas
+              de IA viven colapsadas abajo para no enterrar lo importante. */}
           {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
-          {tab === "today" && (() => { const bills7 = { personal: 0, business: 0 }; items.filter((i) => i.type === "obligation" && !i.done && i.dateISO).forEach((o) => { const du = daysUntil(o.dateISO); if (du == null || du < 0 || du > 7) return; const amt = Number(o.amount) || 0; const bucket = o.area === "work" ? "business" : "personal"; bills7[bucket] += amt; }); return <BalanceCard lang={lang} loc={loc} billsNext7ByAccount={bills7} C={C} SF={SF} />; })()}
-          {tab === "today" && <MonthReportCard lang={lang} C={C} SF={SF} />}
-          {tab === "today" && <NudgesCard lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
-          {tab === "today" && <WeekPlanCard lang={lang} plan={weekPlan} onLoad={loadWeekPlan} C={C} SF={SF} />}
-          {tab === "today" && <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />}
-          {tab === "today" && scope !== "work" && <JournalCard lang={lang} entry={todayJournal} onOpen={openJournal} C={C} SF={SF} />}
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
+          {tab === "today" && <NudgesCard lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
+          {tab === "today" && (() => { const bills7 = { personal: 0, business: 0 }; items.filter((i) => i.type === "obligation" && !i.done && i.dateISO).forEach((o) => { const du = daysUntil(o.dateISO); if (du == null || du < 0 || du > 7) return; const amt = Number(o.amount) || 0; const bucket = o.area === "work" ? "business" : "personal"; bills7[bucket] += amt; }); return <BalanceCard lang={lang} loc={loc} billsNext7ByAccount={bills7} C={C} SF={SF} />; })()}
+          {tab === "today" && (
+            <div style={{ marginTop: 14 }}>
+              <button onClick={() => setInsightsOpen((v) => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "12px 16px", borderRadius: 14, border: `1px solid ${C.borderSoft}`, background: C.surface, color: C.dim, cursor: "pointer", fontFamily: SF, fontSize: 13.5 }}>
+                <span>✨ {lang === "es" ? "Tu asistente" : "Your assistant"}</span>
+                <span style={{ color: C.mute, fontSize: 12 }}>{insightsOpen ? (lang === "es" ? "Ocultar" : "Hide") : (lang === "es" ? "Ver" : "Show")} {insightsOpen ? "▲" : "▼"}</span>
+              </button>
+              {insightsOpen && (<>
+                <WeekPlanCard lang={lang} plan={weekPlan} onLoad={loadWeekPlan} C={C} SF={SF} />
+                <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />
+                <MonthReportCard lang={lang} C={C} SF={SF} />
+                {scope !== "work" && <JournalCard lang={lang} entry={todayJournal} onOpen={openJournal} C={C} SF={SF} />}
+              </>)}
+            </div>
+          )}
           {tab === "calendar" && (<>
             <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>{[["cal", t.nav_calendar], ["dates", t.nav_dates], ["places", t.nav_places]].map(([k, lbl]) => (<button key={k} onClick={() => setCalSub(k)} style={{ flexShrink: 0, padding: "8px 15px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, fontWeight: calSub === k ? 600 : 500, background: calSub === k ? C.red : "transparent", color: calSub === k ? "#ffffff" : C.dim, border: `1px solid ${calSub === k ? C.red : C.border}`, whiteSpace: "nowrap" }}>{lbl}</button>))}</div>
             {calSub === "cal" && <Agenda {...{ t, lang, items: sItems, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
@@ -951,7 +967,11 @@ ${JSON.stringify(snapshot)}`;
             {calSub === "places" && <Places {...{ t, lang, places: favoritePlaces, onAdd: () => setPlaceDraft({ title: "", category: "restaurante", area: scope === "work" ? "work" : "personal", detail: "" }), onEdit: (p) => setPlaceDraft({ id: p.id, title: p.title, category: p.person || "restaurante", area: p.area, detail: p.detail || "" }) }} />}
           </>)}
           {tab === "money" && <Money {...{ t, lang, loc, txns: sTxns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
-          {tab === "vault" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
+          {tab === "vault" && (<>
+            <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 2 }}>{[["files", lang === "es" ? "Archivos" : "Files"], ["keys", lang === "es" ? "Contraseñas" : "Passwords"]].map(([k, lbl]) => (<button key={k} onClick={() => setVaultSub(k)} style={{ flex: 1, padding: "9px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, fontWeight: vaultSub === k ? 600 : 500, background: vaultSub === k ? C.red : "transparent", color: vaultSub === k ? "#ffffff" : C.dim, border: `1px solid ${vaultSub === k ? C.red : C.border}` }}>{k === "keys" ? "🔐 " : "📁 "}{lbl}</button>))}</div>
+            {vaultSub === "files" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
+            {vaultSub === "keys" && <SecretsVault lang={lang} C={C} SF={SF} />}
+          </>)}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "agent" && <AgentScreen lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}

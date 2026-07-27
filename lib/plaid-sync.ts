@@ -183,12 +183,18 @@ export async function runPlaidSync(db: DB, userId: string) {
           };
         });
       if (rows.length) {
+        // Chunk the dedupe lookup: a plain .in() is capped at 1000 rows, which
+        // would make older transactions look "new" and get inserted twice.
         const ids = rows.map((r) => r.plaid_id);
-        const { data: existing } = await db
-          .from("txns")
-          .select("plaid_id, cat, ded, plaid_account")
-          .eq("user_id", userId)
-          .in("plaid_id", ids);
+        const existing: { plaid_id: string; cat?: string; ded?: boolean; plaid_account?: string | null }[] = [];
+        for (let i = 0; i < ids.length; i += 500) {
+          const { data: chunk } = await db
+            .from("txns")
+            .select("plaid_id, cat, ded, plaid_account")
+            .eq("user_id", userId)
+            .in("plaid_id", ids.slice(i, i + 500));
+          if (chunk) existing.push(...chunk);
+        }
         const have = new Set((existing || []).map((x: { plaid_id: string }) => x.plaid_id));
         // "Pristine" imported rows (still Personal / non-deductible — untouched by
         // categorization or by the user) may be re-categorized with the account tags.

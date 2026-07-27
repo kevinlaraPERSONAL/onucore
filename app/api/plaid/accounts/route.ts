@@ -12,7 +12,7 @@ export async function GET() {
 
   const { data } = await supabase
     .from("plaid_accounts")
-    .select("id, account_id, name, mask, label")
+    .select("id, account_id, name, mask, label, balance_available, balance_current, balance_updated_at")
     .eq("user_id", user.id)
     .order("id");
 

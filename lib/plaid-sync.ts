@@ -116,8 +116,22 @@ export async function runPlaidSync(db: DB, userId: string) {
         label: accMap.get(a.account_id) || it.label || "personal",
       }));
       if (toUpsert.length) {
+        // First-time upsert (never overwrites the user's chosen label)
         await db.from("plaid_accounts").upsert(toUpsert, { onConflict: "user_id,account_id", ignoreDuplicates: true });
         for (const a of toUpsert) if (!accMap.has(a.account_id)) accMap.set(a.account_id, a.label);
+      }
+      // Refresh the live balance on every sync (does not touch `label`).
+      for (const a of acc.data.accounts || []) {
+        const b = a.balances || {};
+        await db
+          .from("plaid_accounts")
+          .update({
+            balance_available: b.available ?? null,
+            balance_current: b.current ?? null,
+            balance_updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId)
+          .eq("account_id", a.account_id);
       }
     } catch (e) {
       errors.push("acc:" + ((e as { message?: string })?.message || "err"));

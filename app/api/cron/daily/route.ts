@@ -98,6 +98,28 @@ export async function GET(request: Request) {
         .find((x) => x.du >= 0 && x.du <= 5);
       if (q) lines.push(`💵 Pago trimestral de impuestos ${q.du === 0 ? "HOY" : `en ${q.du} día(s)`}`);
 
+      // Low balance vs bills coming in the next 7 days
+      const { data: acctBalances } = await admin
+        .from("plaid_accounts")
+        .select("label,balance_available,balance_current")
+        .eq("user_id", uid);
+      if (acctBalances && acctBalances.length) {
+        const bills7 = { personal: 0, business: 0 };
+        its
+          .filter((i) => i.type === "obligation" && !i.done && i.date_iso)
+          .forEach((o) => {
+            const du = daysFrom(today, o.date_iso);
+            if (du < 0 || du > 7) return;
+            // items don't carry an account tag; assume personal unless area=work
+            bills7.personal += Number(o.amount || 0);
+          });
+        const sumFor = (label: string) => acctBalances.filter((a) => a.label === label).reduce((s, a) => s + Number(a.balance_available ?? a.balance_current ?? 0), 0);
+        const pAvail = sumFor("personal");
+        if (bills7.personal > 0 && pAvail > 0 && pAvail < bills7.personal) {
+          lines.push(`⚠️ Saldo bajo: cuenta Empleado tiene $${pAvail.toFixed(0)} y vienen $${bills7.personal.toFixed(0)} en biles`);
+        }
+      }
+
       if (!lines.length) continue; // nothing urgent → no noise
 
       const payload = JSON.stringify({ title: "onucore", body: lines.join("\n"), url: "/" });

@@ -6,6 +6,8 @@ import OcIcon from "./OcIcon";
 import PlaidBankSection from "./PlaidBankSection";
 import PushCard from "./PushCard";
 import NudgesCard from "./NudgesCard";
+import BalanceCard from "./BalanceCard";
+import MonthReportCard from "./MonthReportCard";
 import SubLogo from "./SubLogo";
 
 // onucore AI — App consolidada (mobile-first)
@@ -67,7 +69,7 @@ const ACCOUNTS = [{ k: "personal", label: "Empleado", type: "bank" }, { k: "busi
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", nav_places: "Favorite places", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -104,7 +106,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", nav_places: "Mis lugares", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -259,6 +261,7 @@ export default function AtlasAI() {
   const [vehDraft, setVehDraft] = useState(null);
   const [carDraft, setCarDraft] = useState(null);
   const [dateDraft, setDateDraft] = useState(null);
+  const [placeDraft, setPlaceDraft] = useState(null);
   const [radar, setRadar] = useState({ loading: false, text: null, at: 0 });
   const [weekPlan, setWeekPlan] = useState({ loading: false, text: null, at: 0 });
   const loadWeekPlan = async () => {
@@ -552,6 +555,17 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     setDateDraft(null);
   };
   const importantDates = items.filter((i) => i.type === "birthday").slice().sort((a, b) => (a.dateISO || "9").localeCompare(b.dateISO || "9"));
+  const favoritePlaces = items.filter((i) => i.type === "place").slice().sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  const savePlace = async () => {
+    if (!placeDraft || !placeDraft.title) return;
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id); if (!uid2) return;
+    const row = { id: placeDraft.id || uid(), user_id: uid2, type: "place", area: placeDraft.area || "personal", title: placeDraft.title.trim(), person: (placeDraft.category || "").trim(), detail: (placeDraft.detail || "").trim(), source: "app", done: false };
+    await supabase.from("items").upsert(row);
+    const norm = { id: row.id, type: "place", area: row.area, title: row.title, person: row.person, detail: row.detail, done: false };
+    setItems((p) => { const idx = p.findIndex((i) => i.id === row.id); return idx >= 0 ? p.map((i, k) => k === idx ? { ...i, ...norm } : i) : [norm, ...p]; });
+    setPlaceDraft(null);
+  };
   const deleteItem2 = (id) => { setItems((p) => p.filter((i) => i.id !== id)); db.deleteItem(supabase, id); };
   const todayJournal = items.find((i) => i.type === "journal" && i.dateISO === todayISO());
   const openJournal = () => {
@@ -920,6 +934,8 @@ ${JSON.stringify(snapshot)}`;
         )}
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
+          {tab === "today" && (() => { const bills7 = { personal: 0, business: 0 }; items.filter((i) => i.type === "obligation" && !i.done && i.dateISO).forEach((o) => { const du = daysUntil(o.dateISO); if (du == null || du < 0 || du > 7) return; const amt = Number(o.amount) || 0; const bucket = o.area === "work" ? "business" : "personal"; bills7[bucket] += amt; }); return <BalanceCard lang={lang} loc={loc} billsNext7ByAccount={bills7} C={C} SF={SF} />; })()}
+          {tab === "today" && <MonthReportCard lang={lang} C={C} SF={SF} />}
           {tab === "today" && <NudgesCard lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
           {tab === "today" && <WeekPlanCard lang={lang} plan={weekPlan} onLoad={loadWeekPlan} C={C} SF={SF} />}
           {tab === "today" && <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />}
@@ -931,6 +947,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
           {tab === "dates" && <Dates {...{ t, lang, dates: importantDates, onAdd: () => setDateDraft({ title: "", mmdd: "", relation: "" }), onEdit: (d) => setDateDraft({ id: d.id, title: d.title, mmdd: d.dateLabel || (d.dateISO || "").slice(5), relation: d.person || "" }) }} />}
+          {tab === "places" && <Places {...{ t, lang, places: favoritePlaces, onAdd: () => setPlaceDraft({ title: "", category: "restaurante", area: scope === "work" ? "work" : "personal", detail: "" }), onEdit: (p) => setPlaceDraft({ id: p.id, title: p.title, category: p.person || "restaurante", area: p.area, detail: p.detail || "" }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), recent }} />}
         </div>
       </div>
@@ -1220,6 +1237,21 @@ ${JSON.stringify(snapshot)}`;
           <button onClick={saveJournal} style={{ ...btnGold, width: "100%", marginTop: 16 }}>{t.save}</button>
         </Sheet>
       )}
+      {placeDraft && (
+        <Sheet onClose={() => setPlaceDraft(null)}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Lugar favorito" : "Favorite place"}</div>
+          <FieldLabel>{lang === "es" ? "Nombre" : "Name"}</FieldLabel>
+          <input value={placeDraft.title} onChange={(e) => setPlaceDraft((d) => ({ ...d, title: e.target.value }))} placeholder={lang === "es" ? "Ej. Guerrilla Tacos" : "e.g. Guerrilla Tacos"} style={obIn} />
+          <FieldLabel>{lang === "es" ? "Categoría" : "Category"}</FieldLabel>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["restaurante", lang === "es" ? "Restaurante" : "Restaurant"], ["cafe", lang === "es" ? "Café" : "Café"], ["bar", "Bar"], ["coworking", "Coworking"], ["evento", lang === "es" ? "Evento" : "Event"], ["otro", lang === "es" ? "Otro" : "Other"]].map(([k, lbl]) => (<button key={k} type="button" onClick={() => setPlaceDraft((d) => ({ ...d, category: k }))} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${placeDraft.category === k ? C.gold : C.border}`, background: placeDraft.category === k ? "rgba(229,72,77,.12)" : "transparent", color: placeDraft.category === k ? C.gold : C.dim }}>{lbl}</button>))}</div>
+          <FieldLabel>{lang === "es" ? "Nota (dirección, qué pedir…)" : "Note (address, what to order…)"}</FieldLabel>
+          <textarea value={placeDraft.detail} onChange={(e) => setPlaceDraft((d) => ({ ...d, detail: e.target.value }))} rows={3} style={{ ...obIn, resize: "vertical", fontFamily: SF, lineHeight: 1.45 }} />
+          <div style={{ display: "flex", gap: 8, marginTop: 22 }}>
+            {placeDraft.id ? <button onClick={() => { deleteItem2(placeDraft.id); setPlaceDraft(null); }} style={{ ...btnGhost, flex: "0 0 auto", padding: "0 18px", color: C.red }}>{t.del}</button> : null}
+            <button onClick={savePlace} disabled={!placeDraft.title} style={{ ...btnGold, flex: 1, opacity: !placeDraft.title ? 0.5 : 1 }}>{t.save}</button>
+          </div>
+        </Sheet>
+      )}
       {dateDraft && (
         <Sheet onClose={() => setDateDraft(null)}>
           <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Fecha importante" : "Important date"}</div>
@@ -1301,7 +1333,7 @@ ${JSON.stringify(snapshot)}`;
       {moreOpen && (
         <Sheet onClose={() => setMoreOpen(false)}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{t.nav_more}</div>
-          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["dates", t.nav_dates, <DatesI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
+          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["dates", t.nav_dates, <DatesI />], ["places", t.nav_places, <PlacesI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
             <button key={id} onClick={() => { setTab(id); setMoreOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "15px 6px", border: "none", borderBottom: `1px solid ${C.borderSoft}`, background: "transparent", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 16, textAlign: "left" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim }}>{icon}</span>{label}</button>
           ))}
         </Sheet>
@@ -1584,6 +1616,25 @@ function Vault({ t, lang, docs, mediaUrls, isMedia, onView, onUpload, onOpen, on
 }
 function CarI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 11l1.6-4A2 2 0 0 1 8.5 6h7a2 2 0 0 1 1.9 1.3L19 11M4 16h16M6 11h12a2 2 0 0 1 2 2v3H4v-3a2 2 0 0 1 2-2z" /><circle cx="7.5" cy="16.5" r="1.2" /><circle cx="16.5" cy="16.5" r="1.2" /></svg>); }
 function DatesI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 21c-3-3-6-6-6-10a6 6 0 0 1 12 0c0 4-3 7-6 10z" /><circle cx="12" cy="11" r="2" /></svg>); }
+function PlacesI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-7-7-7-13a7 7 0 0 1 14 0c0 6-7 13-7 13z" /><circle cx="12" cy="9" r="2.5" /></svg>); }
+function Places({ t, lang, places, onAdd, onEdit }) {
+  const es = lang === "es";
+  const [cat, setCat] = useState("all");
+  const CATS3 = [["all", es ? "Todos" : "All"], ["restaurante", es ? "Restaurante" : "Restaurant"], ["cafe", "Café"], ["bar", "Bar"], ["coworking", "Coworking"], ["evento", es ? "Evento" : "Event"], ["otro", es ? "Otro" : "Other"]];
+  const list = cat === "all" ? places : places.filter((p) => p.person === cat);
+  const icon = (k) => ({ restaurante: "🍽️", cafe: "☕", bar: "🍸", coworking: "💼", evento: "🎪", otro: "📍" }[k] || "📍");
+  return (<>
+    <button onClick={onAdd} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 10, padding: "13px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600 }}>＋ {es ? "Agregar lugar" : "Add place"}</button>
+    <div style={{ display: "flex", gap: 8, overflowX: "auto", marginTop: 12, paddingBottom: 2 }}>{CATS3.map(([k, lbl]) => <button key={k} onClick={() => setCat(k)} style={{ flexShrink: 0, padding: "7px 13px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: cat === k ? 600 : 400, background: cat === k ? C.surface2 : "transparent", color: cat === k ? C.text : C.mute, border: `1px solid ${cat === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>)}</div>
+    <div style={{ marginTop: 12 }}>
+      {list.length === 0 ? <div style={{ padding: "24px 14px", textAlign: "center", color: C.mute, fontSize: 13.5 }}>{es ? "Sin lugares aún. Guarda tus favoritos de LA." : "No places yet. Save your LA favorites."}</div>
+        : list.map((p) => (<div key={p.id} className="rise" onClick={() => onEdit(p)} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "13px 14px", background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 14, marginBottom: 9, cursor: "pointer" }}>
+          <span style={{ fontSize: 22, flexShrink: 0, lineHeight: 1 }}>{icon(p.person)}</span>
+          <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 14.5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.title}</div>{p.detail ? <div style={{ fontSize: 12, color: C.mute, marginTop: 4, lineHeight: 1.45, whiteSpace: "pre-wrap", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{p.detail}</div> : null}</div>
+        </div>))}
+    </div>
+  </>);
+}
 function RadarCard({ lang, radar, onLoad, C, SF }) {
   const es = lang === "es";
   useEffect(() => { if (!radar.text && !radar.loading && Date.now() - (radar.at || 0) > 60e3) onLoad(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);

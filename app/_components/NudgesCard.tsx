@@ -72,7 +72,7 @@ export default function NudgesCard({
         <div key={n.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 0", borderTop: `1px solid ${C.borderSoft}` }}>
           <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: C.text, lineHeight: 1.45 }}>{n.text}</div>
           <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button disabled={busy === n.id} onClick={() => act(n.id, "accept")} style={{ width: 34, height: 34, borderRadius: 999, border: "none", background: C.green, color: "#ffffff", cursor: "pointer", fontSize: 15, fontFamily: SF, opacity: busy === n.id ? 0.5 : 1 }}>✓</button>
+            <button disabled={busy === n.id} onClick={() => act(n.id, "accept")} style={{ width: 34, height: 34, borderRadius: 999, border: "none", background: C.ok, color: "#ffffff", cursor: "pointer", fontSize: 15, fontFamily: SF, opacity: busy === n.id ? 0.5 : 1 }}>✓</button>
             <button disabled={busy === n.id} onClick={() => act(n.id, "dismiss")} style={{ width: 34, height: 34, borderRadius: 999, border: `1px solid ${C.border}`, background: "transparent", color: C.mute, cursor: "pointer", fontSize: 14, fontFamily: SF, opacity: busy === n.id ? 0.5 : 1 }}>✕</button>
           </div>
         </div>

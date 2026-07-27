@@ -159,7 +159,7 @@ export default function SecretsVault({ lang = "es", C, SF }: { lang?: string; C:
           {es ? "Es la ÚNICA forma de abrir tu cofre si olvidas la clave maestra. Anótalo en papel o guárdalo en un lugar seguro. No se puede volver a mostrar." : "This is the ONLY way in if you forget your master password. Write it down. It cannot be shown again."}
         </div>
         <div style={{ marginTop: 16, padding: "16px 14px", background: C.surface2, border: `1px solid ${C.goldSoft}`, borderRadius: 12, fontSize: 17, letterSpacing: "0.08em", textAlign: "center", color: C.gold, fontWeight: 600, wordBreak: "break-all" }}>{newRecovery}</div>
-        <button onClick={() => copy(newRecovery, "rec")} style={{ ...primary, background: "transparent", border: `1px solid ${C.border}`, color: copiedId === "rec" ? C.green : C.text, marginTop: 10 }}>{copiedId === "rec" ? (es ? "Copiado ✓" : "Copied ✓") : (es ? "Copiar código" : "Copy code")}</button>
+        <button onClick={() => copy(newRecovery, "rec")} style={{ ...primary, background: "transparent", border: `1px solid ${C.border}`, color: copiedId === "rec" ? C.ok : C.text, marginTop: 10 }}>{copiedId === "rec" ? (es ? "Copiado ✓" : "Copied ✓") : (es ? "Copiar código" : "Copy code")}</button>
         <button onClick={() => setNewRecovery(null)} style={primary}>{es ? "Ya lo guardé, continuar" : "Saved it, continue"}</button>
       </div>
     );
@@ -177,7 +177,7 @@ export default function SecretsVault({ lang = "es", C, SF }: { lang?: string; C:
         <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder={es ? "Mínimo 8 caracteres" : "At least 8 characters"} style={input} />
         <div style={label}>{es ? "Repite la clave maestra" : "Repeat master password"}</div>
         <input type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} onKeyDown={(e) => e.key === "Enter" && createVault()} style={input} />
-        {err ? <div style={{ color: C.red, fontSize: 12.5, marginTop: 10 }}>{err}</div> : null}
+        {err ? <div style={{ color: C.bad, fontSize: 12.5, marginTop: 10 }}>{err}</div> : null}
         <button onClick={createVault} disabled={busy} style={{ ...primary, opacity: busy ? 0.6 : 1 }}>{busy ? "…" : (es ? "Crear cofre" : "Create vault")}</button>
       </div>
     );
@@ -198,7 +198,7 @@ export default function SecretsVault({ lang = "es", C, SF }: { lang?: string; C:
           autoFocus
           style={{ ...input, marginTop: 16 }}
         />
-        {err ? <div style={{ color: C.red, fontSize: 12.5, marginTop: 10 }}>{err}</div> : null}
+        {err ? <div style={{ color: C.bad, fontSize: 12.5, marginTop: 10 }}>{err}</div> : null}
         <button onClick={unlock} disabled={busy || !pw} style={{ ...primary, opacity: busy || !pw ? 0.6 : 1 }}>{busy ? "…" : (es ? "Abrir cofre" : "Unlock")}</button>
         <button onClick={() => { setUseRecovery((v) => !v); setPw(""); setErr(""); }} style={{ width: "100%", marginTop: 12, background: "transparent", border: "none", color: C.mute, fontSize: 12.5, cursor: "pointer", fontFamily: SF }}>
           {useRecovery ? (es ? "Usar clave maestra" : "Use master password") : (es ? "Olvidé mi clave maestra" : "I forgot my master password")}
@@ -239,8 +239,8 @@ export default function SecretsVault({ lang = "es", C, SF }: { lang?: string; C:
               <button onClick={() => setDraft({ ...s })} style={{ background: "transparent", border: "none", color: C.mute, fontSize: 15, cursor: "pointer", padding: 4, flexShrink: 0 }}>✏️</button>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, flexWrap: "wrap" }}>
-              {s.user ? <button onClick={() => copy(s.user, `u${s.id}`)} style={{ background: "transparent", border: `1px solid ${C.border}`, color: copiedId === `u${s.id}` ? C.green : C.dim, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, cursor: "pointer", fontFamily: SF }}>{copiedId === `u${s.id}` ? "✓" : (es ? "Copiar usuario" : "Copy user")}</button> : null}
-              {s.pass ? <button onClick={() => copy(s.pass, `p${s.id}`)} style={{ background: copiedId === `p${s.id}` ? "transparent" : C.gold, border: copiedId === `p${s.id}` ? `1px solid ${C.green}` : "none", color: copiedId === `p${s.id}` ? C.green : "#ffffff", borderRadius: 999, padding: "6px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>{copiedId === `p${s.id}` ? (es ? "Copiada ✓" : "Copied ✓") : (es ? "Copiar clave" : "Copy password")}</button> : null}
+              {s.user ? <button onClick={() => copy(s.user, `u${s.id}`)} style={{ background: "transparent", border: `1px solid ${C.border}`, color: copiedId === `u${s.id}` ? C.ok : C.dim, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, cursor: "pointer", fontFamily: SF }}>{copiedId === `u${s.id}` ? "✓" : (es ? "Copiar usuario" : "Copy user")}</button> : null}
+              {s.pass ? <button onClick={() => copy(s.pass, `p${s.id}`)} style={{ background: copiedId === `p${s.id}` ? "transparent" : C.gold, border: copiedId === `p${s.id}` ? `1px solid ${C.ok}` : "none", color: copiedId === `p${s.id}` ? C.ok : "#ffffff", borderRadius: 999, padding: "6px 13px", fontSize: 11.5, fontWeight: 600, cursor: "pointer", fontFamily: SF }}>{copiedId === `p${s.id}` ? (es ? "Copiada ✓" : "Copied ✓") : (es ? "Copiar clave" : "Copy password")}</button> : null}
               {s.pass ? <button onClick={() => setReveal(reveal === s.id ? null : s.id)} style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.dim, borderRadius: 999, padding: "6px 12px", fontSize: 11.5, cursor: "pointer", fontFamily: SF }}>{reveal === s.id ? (es ? "Ocultar" : "Hide") : (es ? "Ver" : "Show")}</button> : null}
             </div>
             {reveal === s.id ? <div style={{ marginTop: 8, padding: "9px 11px", background: C.surface2, borderRadius: 8, fontSize: 14, color: C.text, wordBreak: "break-all", fontFamily: "ui-monospace, monospace" }}>{s.pass}</div> : null}
@@ -264,7 +264,7 @@ export default function SecretsVault({ lang = "es", C, SF }: { lang?: string; C:
             <div style={label}>{es ? "Nota (opcional)" : "Note (optional)"}</div>
             <textarea value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} rows={2} style={{ ...input, resize: "vertical", lineHeight: 1.45 }} />
             <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-              {draft.id ? <button onClick={() => deleteSecret(draft.id)} style={{ padding: "0 18px", height: 46, borderRadius: 12, border: `1px solid ${C.border}`, background: "transparent", color: C.red, cursor: "pointer", fontFamily: SF, fontSize: 14 }}>{es ? "Borrar" : "Delete"}</button> : null}
+              {draft.id ? <button onClick={() => deleteSecret(draft.id)} style={{ padding: "0 18px", height: 46, borderRadius: 12, border: `1px solid ${C.border}`, background: "transparent", color: C.bad, cursor: "pointer", fontFamily: SF, fontSize: 14 }}>{es ? "Borrar" : "Delete"}</button> : null}
               <button onClick={saveSecret} disabled={busy || !draft.title.trim()} style={{ flex: 1, height: 46, borderRadius: 12, border: "none", background: C.red, color: "#ffffff", fontSize: 15, fontWeight: 600, cursor: "pointer", fontFamily: SF, opacity: busy || !draft.title.trim() ? 0.6 : 1 }}>{busy ? "…" : (es ? "Guardar" : "Save")}</button>
             </div>
           </div>

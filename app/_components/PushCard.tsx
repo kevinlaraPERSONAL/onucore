@@ -101,7 +101,7 @@ export default function PushCard({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "10px 0", fontFamily: SF }}>
         <span style={{ fontSize: 14.5, color: C.text }}>{es ? "Avisos en este teléfono" : "Alerts on this phone"}</span>
         {state === "on" ? (
-          <button onClick={disable} style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.green, borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer", fontFamily: SF }}>{es ? "Activados ✓" : "On ✓"}</button>
+          <button onClick={disable} style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.ok, borderRadius: 999, padding: "6px 13px", fontSize: 12.5, cursor: "pointer", fontFamily: SF }}>{es ? "Activados ✓" : "On ✓"}</button>
         ) : state === "off" ? (
           <button onClick={enable} disabled={busy} style={{ background: C.gold, border: "none", color: "#ffffff", borderRadius: 999, padding: "7px 14px", fontSize: 12.5, fontWeight: 600, cursor: "pointer", fontFamily: SF, opacity: busy ? 0.6 : 1 }}>{busy ? "…" : es ? "Activar" : "Enable"}</button>
         ) : (

@@ -55,8 +55,8 @@ export default function BalanceCard({
       : `Heads up on Oprinte: ${money(businessAvail, loc)} available, ${money(billsNext7ByAccount.business, loc)} in bills coming.`);
 
   return (
-    <div className="rise" style={{ marginTop: 12, background: C.surface, border: `1px solid ${alerts.length ? C.red : C.borderSoft}`, borderRadius: 18, padding: "14px 18px 12px", fontFamily: SF }}>
-      <div style={{ fontSize: 9.5, letterSpacing: "0.26em", color: alerts.length ? C.red : C.gold, textTransform: "uppercase", marginBottom: 10 }}>💵 {es ? "Saldos" : "Balances"}</div>
+    <div className="rise" style={{ marginTop: 12, background: C.surface, border: `1px solid ${alerts.length ? C.bad : C.borderSoft}`, borderRadius: 18, padding: "14px 18px 12px", fontFamily: SF }}>
+      <div style={{ fontSize: 9.5, letterSpacing: "0.26em", color: alerts.length ? C.bad : C.gold, textTransform: "uppercase", marginBottom: 10 }}>💵 {es ? "Saldos" : "Balances"}</div>
       {accts.map((a) => {
         const avail = Number(a.balance_available ?? a.balance_current);
         const low = a.label === "personal" ? billsNext7ByAccount.personal > 0 && avail < billsNext7ByAccount.personal : a.label === "business" ? billsNext7ByAccount.business > 0 && avail < billsNext7ByAccount.business : false;
@@ -65,12 +65,12 @@ export default function BalanceCard({
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: 13.5, color: C.text }}>{a.label === "business" ? "Oprinte" : es ? "Empleado" : "Employee"}<span style={{ color: C.mute, fontWeight: 400 }}> · {a.name || (es ? "Cuenta" : "Account")}{a.mask ? ` •• ${a.mask}` : ""}</span></div>
             </div>
-            <span className="num" style={{ fontSize: 15, fontWeight: 600, color: low ? C.red : C.text, flexShrink: 0 }}>{Number.isFinite(avail) ? money(avail, loc) : "—"}</span>
+            <span className="num" style={{ fontSize: 15, fontWeight: 600, color: low ? C.bad : C.text, flexShrink: 0 }}>{Number.isFinite(avail) ? money(avail, loc) : "—"}</span>
           </div>
         );
       })}
       {alerts.map((txt, i) => (
-        <div key={i} style={{ fontSize: 12.5, color: C.red, marginTop: 10, lineHeight: 1.5 }}>⚠️ {txt}</div>
+        <div key={i} style={{ fontSize: 12.5, color: C.bad, marginTop: 10, lineHeight: 1.5 }}>⚠️ {txt}</div>
       ))}
     </div>
   );

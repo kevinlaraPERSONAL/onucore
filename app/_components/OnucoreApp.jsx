@@ -32,15 +32,11 @@ const GOALS = [
 ];
 const CONNS = [
   { k: "google", name: "Google", en: "Sync your calendar (Gmail & contacts soon)", es: "Sincroniza tu calendario (Gmail y contactos pronto)" },
-  { k: "apple", name: "Apple Calendar", en: "Sync your iPhone calendar", es: "Sincroniza el calendario de tu iPhone", soon: true },
-  { k: "whatsapp", name: "WhatsApp", en: "Capture by message or voice note", es: "Captura por mensaje o nota de voz" },
 ];
 
 const LANGS = [
   { code: "en", short: "EN", label: "English", speech: "en-US", locale: "en-US", aiName: "English" },
   { code: "es", short: "ES", label: "Español", speech: "es-MX", locale: "es-MX", aiName: "español" },
-  { code: "pt", short: "PT", label: "Português", speech: "pt-BR", locale: "pt-BR", aiName: "português" },
-  { code: "fr", short: "FR", label: "Français", speech: "fr-FR", locale: "fr-FR", aiName: "français" },
 ];
 const AREAS = {
   work: { en: "Work", es: "Trabajo", color: "#8a8b93" }, family: { en: "Family", es: "Familia", color: "#8a8b93" },
@@ -64,7 +60,8 @@ const CATS = [
   { k: "personal", en: "Personal / Other", es: "Personal / Otros", color: "#7C7D85", line: "—", ded: "none", n_en: "Personal expenses are never deductible.", n_es: "Los gastos personales nunca deducen." },
 ];
 const INCOME = [{ k: "client", en: "Client payment", es: "Pago de cliente", color: "#8a8b93" }, { k: "sales", en: "Product sales", es: "Venta de productos", color: "#8a8b93" }, { k: "other_income", en: "Other income", es: "Otro ingreso", color: "#8a8b93" }];
-const ACCOUNTS = [{ k: "amex", label: "Amex", type: "credit" }, { k: "visa", label: "Visa", type: "credit" }, { k: "paypal", label: "PayPal", type: "paypal" }, { k: "bank", label: "Checking", type: "bank" }, { k: "cash", label: "Cash", type: "cash" }];
+// The user's real-life split: personal = Employee (W-2), business = Oprinte (1099 / Schedule C).
+const ACCOUNTS = [{ k: "personal", label: "Empleado", type: "bank" }, { k: "business", label: "Oprinte", type: "bank" }];
 
 const STR = {
   en: {
@@ -201,7 +198,7 @@ export default function AtlasAI() {
   const desktop = vw >= 1024;
   const contentMax = desktop ? 720 : vw >= 680 ? 600 : 440;
   const navMax = Math.min(contentMax, 560);
-  const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "en"; });
+  const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "es"; });
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
   const [input, setInput] = useState("");
@@ -227,7 +224,7 @@ export default function AtlasAI() {
   const [askQ, setAskQ] = useState("");
   const [askA, setAskA] = useState("");
   const [askLoading, setAskLoading] = useState(false);
-  const [profile, setProfile] = useState({ name: "", nickname: "", role: "", business: "", photo: null, tone: "casual", pronouns: "", birthday: "", whatsapp: "", city: "", tz: "", workerType: "", industry: "", taxStructure: "", website: "", dietary: "", about: "", hobbies: [], people: [], goals: [], wake: "7:00 AM", workHours: "9–6", briefingTime: "8:00 AM", notif: true, briefLen: "short", reminderStyle: "gentle", notifyChannel: "push", quiet: "10pm–7am", defaultAccount: "amex", setAsidePct: 30, conns: { gmail: false, bank: false, contacts: false, whatsapp: true } });
+  const [profile, setProfile] = useState({ name: "", nickname: "", role: "", business: "", photo: null, tone: "casual", pronouns: "", birthday: "", whatsapp: "", city: "", tz: "", workerType: "", industry: "", taxStructure: "", website: "", dietary: "", about: "", hobbies: [], people: [], goals: [], wake: "7:00 AM", workHours: "9–6", briefingTime: "8:00 AM", notif: true, briefLen: "short", reminderStyle: "gentle", notifyChannel: "push", quiet: "10pm–7am", defaultAccount: "personal", setAsidePct: 30, conns: { gmail: false, bank: false, contacts: false, whatsapp: true } });
   const [profileOpen, setProfileOpen] = useState(false);
   const [profMore, setProfMore] = useState(false);
   const [hobbyInput, setHobbyInput] = useState(""); const [pName, setPName] = useState(""); const [pRel, setPRel] = useState("");
@@ -279,7 +276,8 @@ export default function AtlasAI() {
         const tf = await supabase.from("tax_forms").select("*").order("created_at", { ascending: false }); if (alive && tf.data) setTaxForms(tf.data);
         const vv = await supabase.from("vehicles").select("*").order("created_at").limit(1); if (alive && vv.data) setVehicle(vv.data[0] || null);
         const cr = await supabase.from("car_records").select("*").order("created_at", { ascending: false }); if (alive && cr.data) setCarRecords(cr.data);
-      } catch { /* noop */ }
+        if (alive && !briefedRef.current) { briefedRef.current = true; generateBriefing(d.items); }
+      } catch { if (alive && !briefedRef.current) { briefedRef.current = true; generateBriefing([]); } }
     })();
     return () => { alive = false; };
   }, [supabase]);
@@ -341,7 +339,8 @@ export default function AtlasAI() {
     const sys = `Eres el motor de estructuración de onucore AI. El usuario escribe en CUALQUIER idioma; entiéndelo igual.
 Hoy es ${todayISO()}. Resuelve fechas relativas a ISO. Una frase puede tener VARIOS ítems.
 type ∈ event,task,obligation,expense,income,note,idea,contact,followup,reminder. area ∈ work,family,personal,health.
-Si type=expense: agrega financeCat ∈ [${CATS.map((c) => c.k).join(",")}], account ∈ [amex,visa,paypal,bank,cash], deductible (bool).
+Si type=expense: agrega financeCat ∈ [${CATS.map((c) => c.k).join(",")}], account ∈ [personal,business] (personal=Empleado/casa, business=negocio Oprinte), deductible (bool).
+Si type=obligation (bil por pagar): agrega repeat="monthly" si es recurrente (renta, celular, internet, luz), si no omite repeat.
 Si type=income: agrega incomeCat ∈ [client,sales,other_income], account.
 Redacta title/dateLabel/detail en ${L.aiName}.
 SOLO JSON: {"items":[{"type":"","area":"personal","title":"","amount":null,"dateISO":null,"dateLabel":"","person":"","priority":"medium","detail":"","financeCat":"","incomeCat":"","account":"","deductible":true}]}
@@ -353,9 +352,9 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
       const parsed = JSON.parse(out);
       const ni = (parsed.items || []).map((it) => {
         const type = it.type || "note";
-        if (type === "expense") { const cat = catBy(it.financeCat).k === it.financeCat ? it.financeCat : "personal"; const account = acctBy(it.account).k === it.account ? it.account : "amex"; return { _dest: "txn", id: uid(), kind: "expense", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || text, ded: typeof it.deductible === "boolean" ? it.deductible : catBy(cat).ded !== "none" }; }
-        if (type === "income") { const cat = incBy(it.incomeCat).k === it.incomeCat ? it.incomeCat : "client"; const account = acctBy(it.account).k === it.account ? it.account : "bank"; return { _dest: "txn", id: uid(), kind: "income", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || text, ded: false }; }
-        return { _dest: "item", id: uid(), type, area: AREAS[it.area] ? it.area : "personal", title: it.title || text, amount: typeof it.amount === "number" ? it.amount : null, dateISO: it.dateISO || null, dateLabel: it.dateLabel || "", person: it.person || "", priority: it.priority || "medium", detail: it.detail || "", done: false };
+        if (type === "expense") { const cat = catBy(it.financeCat).k === it.financeCat ? it.financeCat : "personal"; const ded = typeof it.deductible === "boolean" ? it.deductible : catBy(cat).ded !== "none"; const account = acctBy(it.account).k === it.account ? it.account : ded ? "business" : "personal"; return { _dest: "txn", id: uid(), kind: "expense", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || text, ded }; }
+        if (type === "income") { const cat = incBy(it.incomeCat).k === it.incomeCat ? it.incomeCat : "client"; const account = acctBy(it.account).k === it.account ? it.account : cat === "other_income" ? "personal" : "business"; return { _dest: "txn", id: uid(), kind: "income", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || text, ded: false }; }
+        return { _dest: "item", id: uid(), type, area: AREAS[it.area] ? it.area : "personal", title: it.title || text, amount: typeof it.amount === "number" ? it.amount : null, dateISO: it.dateISO || null, dateLabel: it.dateLabel || "", person: it.person || "", priority: it.priority || "medium", detail: it.detail || "", repeat: it.repeat === "monthly" ? "monthly" : null, done: false };
       });
       if (ni.length === 0) setToast({ kind: "warn", text: t.nothing }); else setReview(ni);
       setInput("");
@@ -380,7 +379,10 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
       const d = await res.json(); setBriefing((d.content || []).filter((b) => b.type === "text").map((b) => b.text).join(" ").trim() || "—");
     } catch { setBriefing("—"); } finally { setBriefingLoading(false); }
   }
-  useEffect(() => { generateBriefing(items); /* eslint-disable-next-line */ }, [lang]);
+  // Briefing runs AFTER the user's data loads (not on mount with empty state);
+  // language changes regenerate it once data is in.
+  const briefedRef = useRef(false);
+  useEffect(() => { if (briefedRef.current) generateBriefing(items); /* eslint-disable-next-line */ }, [lang]);
   useEffect(() => { waEndRef.current && waEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [waMsgs, waTyping]);
   useEffect(() => { chatEndRef.current && chatEndRef.current.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatLoading]);
   useEffect(() => { if (typeof window !== "undefined" && window.sessionStorage.getItem("onucore_onboard") === "1") setShowOnboarding(true); }, []);
@@ -414,14 +416,28 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
     setPhoto(null); setPhotoType(null); setNote(""); setRemOpen(false); setRemBusy(false); setTab("today");
   }
 
-  const openEdit = (it) => setItemDraft({ ...it });
+  const openEdit = (it) => { if (it.source === "google") return; setItemDraft({ ...it }); };
   const saveItem = () => { const { _new, ...x } = itemDraft; setItems((p) => (p.some((i) => i.id === x.id) ? p.map((i) => (i.id === x.id ? x : i)) : [x, ...p])); db.upsertItem(supabase, x); setItemDraft(null); };
   const deleteItem = () => { const id = itemDraft.id; setItems((p) => p.filter((i) => i.id !== id)); db.deleteItem(supabase, id); setItemDraft(null); };
-  const toggleDone = (id) => { setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i))); const cur = items.find((i) => i.id === id); if (cur) db.upsertItem(supabase, { ...cur, done: !cur.done }); };
+  const toggleDone = (id) => {
+    const cur = items.find((i) => i.id === id);
+    // Recurring bill: "paid" rolls it forward to next month instead of killing it.
+    if (cur && cur.type === "obligation" && cur.repeat === "monthly" && !cur.done) {
+      const nx = addMonthsISO(cur.dateISO || todayISO(), 1);
+      const upd = { ...cur, dateISO: nx };
+      setItems((p) => p.map((i) => (i.id === id ? upd : i)));
+      db.upsertItem(supabase, upd);
+      setToast({ kind: "ok", text: (lang === "es" ? "Pagado ✓ Próximo: " : "Paid ✓ Next: ") + fmtDate(nx, lang) });
+      return;
+    }
+    setItems((p) => p.map((i) => (i.id === id ? { ...i, done: !i.done } : i)));
+    if (cur) db.upsertItem(supabase, { ...cur, done: !cur.done });
+  };
   const newEvent = () => setItemDraft({ id: uid(), type: "event", area: "work", title: "", dateISO: calSel, dateLabel: "", _new: true });
   const openTxn = (tx) => setTxnDraft({ ...tx, amount: String(tx.amount) });
-  const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: profile.defaultAccount || "amex", note: "", ded: true, _new: true });
+  const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: acctBy(profile.defaultAccount || "personal").k, note: "", ded: true, _new: true });
   const newSub = () => setItemDraft({ id: uid(), type: "subscription", area: "personal", title: "", amount: "", dateISO: "", dateLabel: "monthly", _new: true });
+  const newObl = () => setItemDraft({ id: uid(), type: "obligation", area: "personal", title: "", amount: null, dateISO: todayISO(), repeat: "monthly", done: false, _new: true });
   const refreshDocs = async () => { const { data } = await supabase.from("documents").select("*").order("created_at", { ascending: false }); setDocs(data || []); };
   const onDocFile = (e) => { const f = e.target.files && e.target.files[0]; if (f) setDocUp({ file: f, name: f.name, category: "tax" }); e.target.value = ""; };
   const uploadDoc = async () => {
@@ -502,14 +518,14 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   function normalizeNi(list) {
     return (list || []).map((it) => {
       const type = it.type || "note";
-      if (type === "expense") { const cat = catBy(it.financeCat).k === it.financeCat ? it.financeCat : "personal"; const account = acctBy(it.account).k === it.account ? it.account : "amex"; return { _dest: "txn", id: uid(), kind: "expense", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || "", ded: typeof it.deductible === "boolean" ? it.deductible : catBy(cat).ded !== "none" }; }
-      if (type === "income") { const cat = incBy(it.incomeCat).k === it.incomeCat ? it.incomeCat : "client"; const account = acctBy(it.account).k === it.account ? it.account : "bank"; return { _dest: "txn", id: uid(), kind: "income", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || "", ded: false }; }
+      if (type === "expense") { const cat = catBy(it.financeCat).k === it.financeCat ? it.financeCat : "personal"; const ded = typeof it.deductible === "boolean" ? it.deductible : catBy(cat).ded !== "none"; const account = acctBy(it.account).k === it.account ? it.account : ded ? "business" : "personal"; return { _dest: "txn", id: uid(), kind: "expense", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || "", ded }; }
+      if (type === "income") { const cat = incBy(it.incomeCat).k === it.incomeCat ? it.incomeCat : "client"; const account = acctBy(it.account).k === it.account ? it.account : cat === "other_income" ? "personal" : "business"; return { _dest: "txn", id: uid(), kind: "income", amount: num(it.amount), cat, account, dateISO: it.dateISO || todayISO(), title: it.title || "", ded: false }; }
       return { _dest: "item", id: uid(), type, area: AREAS[it.area] ? it.area : "personal", title: it.title || "", amount: typeof it.amount === "number" ? it.amount : null, dateISO: it.dateISO || null, dateLabel: it.dateLabel || "", person: "", priority: it.priority || "medium", detail: it.detail || "", done: false };
     });
   }
   async function waStructure(text) {
     const sys = `Eres onucore AI conectado por WhatsApp. El usuario escribe en CUALQUIER idioma. Hoy es ${todayISO()}. Resuelve fechas relativas. Una frase puede tener varios ítems.
-type ∈ event,task,obligation,expense,income,note,idea,reminder. area ∈ work,family,personal,health. Si expense: financeCat ∈ [${CATS.map((c) => c.k).join(",")}], account ∈ [amex,visa,paypal,bank,cash], deductible bool. Si income: incomeCat ∈ [client,sales,other_income], account.
+type ∈ event,task,obligation,expense,income,note,idea,reminder. area ∈ work,family,personal,health. Si expense: financeCat ∈ [${CATS.map((c) => c.k).join(",")}], account ∈ [personal,business] (business=negocio Oprinte), deductible bool. Si income: incomeCat ∈ [client,sales,other_income], account. Si obligation recurrente (renta, celular, internet): repeat="monthly".
 Devuelve SOLO JSON: {"items":[{"type":"","area":"personal","title":"","amount":null,"dateISO":null,"dateLabel":"","financeCat":"","incomeCat":"","account":"","deductible":true}],"reply":""}
 reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empieza con ✓, di qué entendiste. Si nada accionable: items vacío y reply pidiendo más detalle.${userCtx()}`;
     const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: sys, messages: [{ role: "user", content: text }] }) });
@@ -536,7 +552,7 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
       setWaTyping(true);
       try {
         const b64 = rd.result.split(",")[1];
-        const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI por WhatsApp. El usuario mandó la foto de un recibo. Extrae el gasto. SOLO JSON: {"items":[{"type":"expense","title":"","amount":0,"financeCat":"office","account":"amex","deductible":true,"area":"personal"}],"reply":""}. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. reply: confirmación corta estilo WhatsApp en español con ✓, monto y comercio, "→ Finanzas".`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Lee el recibo y regístralo." }] }] }) });
+        const res = await fetch("/api/claude", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: MODEL, max_tokens: 1000, system: `Eres onucore AI por WhatsApp. El usuario mandó la foto de un recibo. Extrae el gasto. SOLO JSON: {"items":[{"type":"expense","title":"","amount":0,"financeCat":"office","account":"business","deductible":true,"area":"personal"}],"reply":""}. financeCat ∈ [${CATS.map((c) => c.k).join(",")}]. reply: confirmación corta estilo WhatsApp en español con ✓, monto y comercio, "→ Finanzas".`, messages: [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: type, data: b64 } }, { type: "text", text: "Lee el recibo y regístralo." }] }] }) });
         const d = await res.json(); const o = (d.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").replace(/```json|```/g, "").trim(); const p = JSON.parse(o); const ni = normalizeNi(p.items);
         if (ni.length) { commitNi(ni); setRecentId(ni[0].id); setTimeout(() => setRecentId(null), 2000); }
         setWaTyping(false); setWaMsgs((m) => [...m, { id: uid(), from: "bot", text: p.reply || "✓ → Finanzas", cards: ni.map((n) => ({ title: n.title, dest: "Finanzas", amount: n.amount, ded: n.ded })) }]);
@@ -581,7 +597,7 @@ reply: confirmación CORTA estilo WhatsApp EN EL MISMO IDIOMA del usuario, empie
               priority: { type: "string", enum: ["low", "medium", "high"] },
               financeCat: { type: "string", description: "Categoría de gasto. Una de: " + CATS.map((c) => c.k).join(", ") },
               incomeCat: { type: "string", description: "Categoría de ingreso: client, sales u other_income." },
-              account: { type: "string", description: "Método: amex, visa, paypal, bank o cash." },
+              account: { type: "string", description: "Cuenta: 'personal' (Empleado/casa) o 'business' (negocio Oprinte). Gastos deducibles de negocio → business." },
               deductible: { type: "boolean", description: "Si el gasto parece deducible de impuestos." },
             },
             required: ["type", "title"],
@@ -696,6 +712,19 @@ ${JSON.stringify(snapshot)}`;
     items.filter((i) => i.type === "event" && i.dateISO).forEach((e) => { (evByDay[e.dateISO] = evByDay[e.dateISO] || []).push(e); });
     Object.entries(evByDay).forEach(([d, evs]) => { const du = daysUntil(d); if (evs.length >= 2 && du != null && du >= 0 && du <= 7) out.push({ kind: "conflict", color: C.red, text: es ? `${evs.length} citas el ${fmtDate(d, lang)} — revisa que no se empalmen` : `${evs.length} appointments on ${fmtDate(d, lang)} — check for overlaps` }); });
     items.filter((i) => i.type === "obligation").forEach((o) => { const du = daysUntil(o.dateISO); if (du != null && du >= 0 && du <= 3 && !o.done) out.push({ kind: "bill", color: C.gold, text: (es ? `${o.title} vence ${du <= 0 ? "hoy" : "en " + du + " día(s)"}` : `${o.title} due ${du <= 0 ? "today" : "in " + du + " day(s)"}`) + (o.amount ? ` · ${money(o.amount, loc)}` : "") }); });
+    // Car: services/renewals due soon or overdue.
+    const KIND_ES = { oil: "Cambio de aceite", registration: "Placas", insurance: "Seguro del carro", tires: "Llantas", brakes: "Frenos", inspection: "Inspección", service: "Servicio del carro" };
+    const KIND_EN = { oil: "Oil change", registration: "Registration", insurance: "Car insurance", tires: "Tires", brakes: "Brakes", inspection: "Inspection", service: "Car service" };
+    carRecords.filter((r) => r.due_iso).forEach((r) => {
+      const du = daysUntil(r.due_iso);
+      if (du == null || du > 30) return;
+      const nm = r.title || (es ? KIND_ES : KIND_EN)[r.kind] || (es ? "Servicio del carro" : "Car service");
+      const when = du < 0 ? (es ? `venció hace ${-du} día(s)` : `overdue by ${-du} day(s)`) : du === 0 ? (es ? "vence hoy" : "due today") : es ? `vence en ${du} día(s)` : `due in ${du} day(s)`;
+      out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: `🚗 ${nm} ${when}` });
+    });
+    if (vehicle && vehicle.insurance_expiry) { const du = daysUntil(vehicle.insurance_expiry); if (du != null && du <= 30) out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: es ? `🚗 Seguro del carro ${du < 0 ? "venció" : du === 0 ? "vence hoy" : `vence en ${du} día(s)`}` : `🚗 Car insurance ${du < 0 ? "expired" : du === 0 ? "expires today" : `expires in ${du} day(s)`}` }); }
+    // Subscriptions renewing in the next 3 days.
+    subs.forEach((s) => { if (!s.dateISO) return; const du = daysUntil(nextRenewal(s.dateISO, s.dateLabel)); if (du != null && du >= 0 && du <= 3) out.push({ kind: "sub", color: C.gold, text: (es ? `${s.title} se renueva ${du === 0 ? "hoy" : "en " + du + " día(s)"}` : `${s.title} renews ${du === 0 ? "today" : "in " + du + " day(s)"}`) + (s.amount ? ` · ${money(Number(s.amount) || 0, loc)}` : "") }); });
     const m = new Date(); const inMonth = (iso) => { const dt = new Date(iso + "T00:00:00"); return dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth(); };
     const mInc = txns.filter((x) => x.kind === "income" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
     const mExp = txns.filter((x) => x.kind === "expense" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
@@ -738,21 +767,15 @@ ${JSON.stringify(snapshot)}`;
           </div>
         </div>
 
-        {(tab === "today" || tab === "notes") && (
-          <div style={{ display: "flex", gap: 8, padding: "12px 20px 4px", overflowX: "auto" }}>
-            <AreaPill label={t.area_all} color={C.gold} on={areaFilter === "all"} onClick={() => setAreaFilter("all")} />
-            {Object.keys(AREAS).map((a) => <AreaPill key={a} label={areaName(a, lang)} color={AREAS[a].color} on={areaFilter === a} onClick={() => setAreaFilter(a)} />)}
-          </div>
-        )}
 
         <div style={{ padding: "8px 20px 0" }}>
-          {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
+          {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
           {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
-          {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
+          {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
-          {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), openWhatsapp: () => setWaOpen(true), recent }} />}
+          {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), recent }} />}
         </div>
       </div>
 
@@ -806,7 +829,7 @@ ${JSON.stringify(snapshot)}`;
         </div>
       )}
 
-      {toast && (<div className="rise" onClick={() => setToast(null)} style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 86, maxWidth: 400, width: "calc(100% - 40px)", zIndex: 40, background: C.surface, border: `1px solid ${toast.kind === "ok" ? C.goldSoft : C.red}`, borderRadius: 14, padding: "12px 16px", fontSize: 12.5, color: toast.kind === "ok" ? C.gold : C.red, boxShadow: "0 14px 40px rgba(0,0,0,.45)" }}>{toast.text}</div>)}
+      {toast && (<div className="rise" onClick={() => setToast(null)} style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 86, maxWidth: 400, width: "calc(100% - 40px)", zIndex: 40, background: C.surface, border: `1px solid ${toast.kind === "ok" ? C.green : C.red}`, borderRadius: 14, padding: "12px 16px", fontSize: 12.5, color: toast.kind === "ok" ? C.green : C.red, boxShadow: "0 14px 40px rgba(0,0,0,.45)" }}>{toast.text}</div>)}
 
       {voiceMode && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", flexDirection: "column", alignItems: "center", background: "rgba(26,26,31,.96)", backdropFilter: "blur(8px)", animation: "fadeUp .35s ease both" }}>
@@ -908,12 +931,10 @@ ${JSON.stringify(snapshot)}`;
                 <PField label={t.set_lang}><div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{LANGS.map((l) => <Chip key={l.code} label={l.label} color={C.gold} on={l.code === lang} onClick={() => setLang(l.code)} />)}</div></PField>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}><span style={{ fontSize: 14.5 }}>{t.set_notif}</span><button onClick={() => setProfile((p) => ({ ...p, notif: !p.notif }))} style={{ width: 46, height: 27, borderRadius: 999, border: `1px solid ${profile.notif ? C.gold : C.border}`, background: profile.notif ? C.gold : C.surface2, position: "relative", cursor: "pointer" }}><span style={{ position: "absolute", top: 2, left: profile.notif ? 21 : 2, width: 21, height: 21, borderRadius: 999, background: profile.notif ? C.bg : C.mute, transition: "left .2s" }} /></button></div>
                 <PField label={t.set_brieflen}><div style={{ display: "flex", gap: 8 }}>{[["short", t.bl_short], ["detailed", t.bl_detailed]].map(([k, lbl]) => <Chip key={k} label={lbl} color={C.gold} on={profile.briefLen === k} onClick={() => setProfile((p) => ({ ...p, briefLen: k }))} />)}</div></PField>
-                <PField label={t.set_remstyle}><div style={{ display: "flex", gap: 8 }}>{[["gentle", t.rs_gentle], ["firm", t.rs_firm]].map(([k, lbl]) => <Chip key={k} label={lbl} color={C.gold} on={profile.reminderStyle === k} onClick={() => setProfile((p) => ({ ...p, reminderStyle: k }))} />)}</div></PField>
-                <PField label={t.set_channel}><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["push", "Push"], ["whatsapp", "WhatsApp"], ["email", "Email"]].map(([k, lbl]) => <Chip key={k} label={lbl} color={C.gold} on={profile.notifyChannel === k} onClick={() => setProfile((p) => ({ ...p, notifyChannel: k }))} />)}</div></PField>
                 <PField label={t.set_acct}><div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{ACCOUNTS.map((a) => <Chip key={a.k} label={a.label} color={C.gold} on={profile.defaultAccount === a.k} onClick={() => setProfile((p) => ({ ...p, defaultAccount: a.k }))} />)}</div></PField>
                 <PField label={`${t.set_taxpct}: ${profile.setAsidePct}%`}><input type="range" min="10" max="45" value={profile.setAsidePct} onChange={(e) => setProfile((p) => ({ ...p, setAsidePct: +e.target.value }))} style={{ width: "100%", accentColor: C.gold }} /></PField>
                 <button onClick={exportData} style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", color: C.text, fontSize: 14.5, padding: "12px 0", cursor: "pointer", fontFamily: SF, borderTop: `1px solid ${C.borderSoft}` }}>↓ {t.set_export}</button>
-                <button onClick={() => setProfileOpen(false)} style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", color: C.dim, fontSize: 14.5, padding: "12px 0", cursor: "pointer", fontFamily: SF, borderTop: `1px solid ${C.borderSoft}` }}>{t.set_signout}</button>
+                <button onClick={async () => { try { await supabase.auth.signOut(); } catch { /* noop */ } if (typeof window !== "undefined") window.location.reload(); }} style={{ width: "100%", textAlign: "left", background: "transparent", border: "none", color: C.dim, fontSize: 14.5, padding: "12px 0", cursor: "pointer", fontFamily: SF, borderTop: `1px solid ${C.borderSoft}` }}>{t.set_signout}</button>
               </div>
 
               <button onClick={() => { setProfileOpen(false); generateBriefing(items); }} style={{ ...btnGold, width: "100%", marginTop: 18 }}>{t.save}</button>
@@ -957,39 +978,6 @@ ${JSON.stringify(snapshot)}`;
         </div>
       )}
 
-      {waOpen && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 105, display: "flex", justifyContent: "center", background: "#0a0a0a" }}>
-          <div style={{ width: "100%", maxWidth: 440, display: "flex", flexDirection: "column", background: WACL.bg }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 14px", background: WACL.header, flexShrink: 0 }}>
-              <button onClick={() => setWaOpen(false)} style={{ background: "transparent", border: "none", color: WACL.txt, fontSize: 24, cursor: "pointer", fontFamily: SF, lineHeight: 1 }}>‹</button>
-              <div style={{ width: 38, height: 38, borderRadius: 999, background: C.gold, display: "flex", alignItems: "center", justifyContent: "center", color: "#ffffff", fontWeight: 700 }}>A</div>
-              <div style={{ flex: 1 }}><div style={{ color: WACL.txt, fontSize: 15.5, fontWeight: 600 }}>onucore AI</div><div style={{ color: WACL.grn, fontSize: 12 }}>{waTyping ? (lang === "es" ? "escribiendo…" : "typing…") : (lang === "es" ? "en línea" : "online")}</div></div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-              {waMsgs.map((m) => (
-                <div key={m.id} style={{ alignSelf: m.from === "me" ? "flex-end" : "flex-start", maxWidth: "82%" }}>
-                  <div style={{ background: m.from === "me" ? WACL.outB : WACL.inB, color: WACL.txt, padding: m.kind === "photo" ? 4 : "8px 11px", borderRadius: 12, borderTopRightRadius: m.from === "me" ? 3 : 12, borderTopLeftRadius: m.from === "bot" ? 3 : 12, fontSize: 14.5, lineHeight: 1.45 }}>
-                    {m.kind === "voice" ? (<div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 180, padding: "4px 2px" }}><div style={{ width: 30, height: 30, borderRadius: 999, background: WACL.grn, display: "flex", alignItems: "center", justifyContent: "center", color: WACL.bg, fontSize: 12 }}>▶</div><div style={{ flex: 1, display: "flex", alignItems: "center", gap: 2, height: 22 }}>{Array.from({ length: 20 }).map((_, i) => <span key={i} style={{ flex: 1, height: `${30 + Math.abs(Math.sin(i)) * 60}%`, background: WACL.dim, borderRadius: 2 }} />)}</div><span style={{ fontSize: 11, color: WACL.dim }}>{m.dur}</span></div>)
-                      : m.kind === "photo" ? (<img src={m.src} alt="" style={{ width: 200, maxWidth: "100%", borderRadius: 9, display: "block" }} />)
-                      : (<span>{m.text}</span>)}
-                    {m.cards && m.cards.length > 0 && (<div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 9 }}>{m.cards.map((c, i) => { const dd = WDEST[c.dest] || WDEST.Notas; return (<div key={i} style={{ display: "flex", alignItems: "center", gap: 9, background: "rgba(0,0,0,.22)", border: `1px solid ${dd.color}44`, borderRadius: 9, padding: "7px 10px" }}><span style={{ fontSize: 14 }}>{dd.icon}</span><div style={{ flex: 1, minWidth: 0 }}><div style={{ fontSize: 13 }}>{c.title}</div><div style={{ fontSize: 11, color: dd.color, marginTop: 1 }}>{c.dest}{c.amount != null ? ` · $${c.amount}` : ""}{c.ded ? " · deducible" : ""}</div></div></div>); })}</div>)}
-                  </div>
-                </div>
-              ))}
-              {waTyping && (<div style={{ alignSelf: "flex-start", background: WACL.inB, borderRadius: 12, borderTopLeftRadius: 3, padding: "12px 14px", display: "flex", gap: 4 }}>{[0, 1, 2].map((i) => <span key={i} style={{ width: 7, height: 7, borderRadius: 999, background: WACL.dim, animation: `blink 1.3s ${i * 0.2}s infinite` }} />)}</div>)}
-              <div ref={waEndRef} />
-            </div>
-            {waShowEx && (<div style={{ display: "flex", gap: 7, padding: "0 12px 8px", flexWrap: "wrap" }}>{WAEX.map((ex, i) => <button key={i} onClick={() => waSend(ex.label, ex.kind, ex.text)} style={{ background: "transparent", border: `1px solid ${WACL.grn}66`, color: WACL.grn, borderRadius: 999, padding: "7px 12px", fontSize: 12.5, cursor: "pointer", fontFamily: SF }}>{ex.label}</button>)}</div>)}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px 14px", flexShrink: 0 }}>
-              <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, background: WACL.header, borderRadius: 24, padding: "6px 8px 6px 16px" }}>
-                <input className="ph" value={waInput} onChange={(e) => setWaInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && waSend(waInput, "text")} placeholder={lang === "es" ? "Mensaje" : "Message"} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: WACL.txt, fontSize: 15, fontFamily: SF, minWidth: 0 }} />
-                <button onClick={() => waFileRef.current && waFileRef.current.click()} style={{ background: "transparent", border: "none", color: WACL.dim, fontSize: 19, cursor: "pointer" }}>📎</button>
-              </div>
-              <button onClick={() => waSend(waInput, "text")} style={{ width: 46, height: 46, borderRadius: 999, border: "none", background: WACL.grn, color: WACL.bg, fontSize: 19, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{waInput.trim() ? "➤" : "🎤"}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {remOpen && (
         <Sheet onClose={() => !remBusy && setRemOpen(false)}>
@@ -1003,13 +991,14 @@ ${JSON.stringify(snapshot)}`;
 
       {itemDraft && (
         <Sheet onClose={() => setItemDraft(null)}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><div style={{ fontSize: 16, fontWeight: 600 }}>{itemDraft._new ? (itemDraft.type === "subscription" ? t.sub_new : t.ev_new) : t.edit_title}</div><span style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.mute }}>{t["type_" + itemDraft.type] || ""}</span></div>
-          <input className="ph" value={itemDraft.title} onChange={(e) => setItemDraft({ ...itemDraft, title: e.target.value })} placeholder={itemDraft.type === "subscription" ? t.sub_name_ph : t.ev_new} style={{ ...inputS, marginTop: 0 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}><div style={{ fontSize: 16, fontWeight: 600 }}>{itemDraft._new ? (itemDraft.type === "subscription" ? t.sub_new : itemDraft.type === "obligation" ? (lang === "es" ? "Nuevo bil" : "New bill") : t.ev_new) : t.edit_title}</div><span style={{ fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: C.mute }}>{t["type_" + itemDraft.type] || ""}</span></div>
+          <input className="ph" value={itemDraft.title} onChange={(e) => setItemDraft({ ...itemDraft, title: e.target.value })} placeholder={itemDraft.type === "subscription" ? t.sub_name_ph : itemDraft.type === "obligation" ? (lang === "es" ? "Renta, celular, internet…" : "Rent, phone, internet…") : t.ev_new} style={{ ...inputS, marginTop: 0 }} />
           <FieldLabel>{t.area_label}</FieldLabel>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{Object.keys(AREAS).map((a) => <AreaPill key={a} label={areaName(a, lang)} color={AREAS[a].color} on={itemDraft.area === a} onClick={() => setItemDraft({ ...itemDraft, area: a })} />)}</div>
           {(itemDraft.type === "expense" || itemDraft.type === "obligation" || itemDraft.type === "subscription") && (<><FieldLabel>{t.amount_label}</FieldLabel><input className="ph" type="number" value={itemDraft.amount ?? ""} onChange={(e) => setItemDraft({ ...itemDraft, amount: e.target.value === "" ? null : parseFloat(e.target.value) })} style={{ ...inputS, marginTop: 0 }} /></>)}
           {itemDraft.type === "subscription" && (<><FieldLabel>{t.sub_cycle}</FieldLabel><div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>{[["monthly", t.sub_monthly], ["yearly", t.sub_yearly], ["weekly", t.sub_weekly]].map(([k, lbl]) => <button key={k} type="button" onClick={() => setItemDraft({ ...itemDraft, dateLabel: k })} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${itemDraft.dateLabel === k ? C.gold : C.border}`, background: itemDraft.dateLabel === k ? "rgba(229,72,77,.12)" : "transparent", color: itemDraft.dateLabel === k ? C.gold : C.dim }}>{lbl}</button>)}</div><FieldLabel>{t.sub_renews}</FieldLabel><input className="ph" type="date" value={itemDraft.dateISO || ""} onChange={(e) => setItemDraft({ ...itemDraft, dateISO: e.target.value })} style={{ ...inputS, marginTop: 0 }} /></>)}
-          {(itemDraft.type === "event" || itemDraft.type === "obligation" || itemDraft.type === "task") && (<><FieldLabel>{itemDraft.type === "event" ? t.f_time : t.date_label}</FieldLabel><input className="ph" value={itemDraft.dateLabel || ""} onChange={(e) => setItemDraft({ ...itemDraft, dateLabel: e.target.value })} style={{ ...inputS, marginTop: 0 }} /></>)}
+          {(itemDraft.type === "event" || itemDraft.type === "task") && (<><FieldLabel>{itemDraft.type === "event" ? t.f_time : t.date_label}</FieldLabel><input className="ph" value={itemDraft.dateLabel || ""} onChange={(e) => setItemDraft({ ...itemDraft, dateLabel: e.target.value })} style={{ ...inputS, marginTop: 0 }} /></>)}
+          {itemDraft.type === "obligation" && (<><FieldLabel>{lang === "es" ? "Vence" : "Due date"}</FieldLabel><input type="date" value={itemDraft.dateISO || ""} onChange={(e) => setItemDraft({ ...itemDraft, dateISO: e.target.value })} style={{ ...inputS, marginTop: 0, colorScheme: "dark" }} /><FieldLabel>{lang === "es" ? "Se repite" : "Repeats"}</FieldLabel><div style={{ display: "flex", gap: 8 }}>{[[null, lang === "es" ? "No" : "No"], ["monthly", lang === "es" ? "Cada mes" : "Monthly"]].map(([k, lbl]) => <button key={String(k)} type="button" onClick={() => setItemDraft({ ...itemDraft, repeat: k })} style={{ padding: "8px 14px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, border: `1px solid ${(itemDraft.repeat || null) === k ? C.gold : C.border}`, background: (itemDraft.repeat || null) === k ? "rgba(229,72,77,.12)" : "transparent", color: (itemDraft.repeat || null) === k ? C.gold : C.dim }}>{lbl}</button>)}</div></>)}
           {(itemDraft.type === "task" || itemDraft.type === "reminder" || itemDraft.type === "followup") && (<button onClick={() => setItemDraft({ ...itemDraft, done: !itemDraft.done })} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 16, background: "transparent", border: "none", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 15 }}><span style={{ width: 20, height: 20, borderRadius: 6, border: `1.5px solid ${itemDraft.done ? C.gold : C.border}`, background: itemDraft.done ? C.gold : "transparent" }} /> {t.done_label}</button>)}
           <div style={{ display: "flex", gap: 12, marginTop: 22 }}>{!itemDraft._new && <button onClick={deleteItem} style={{ ...btnGhost, color: C.red, borderColor: "#5a2b2d", flex: 1 }}>{t.del}</button>}<button onClick={saveItem} disabled={!itemDraft.title.trim()} style={{ ...btnGold, flex: 2, opacity: itemDraft.title.trim() ? 1 : 0.5 }}>{t.save}</button></div>
         </Sheet>
@@ -1277,7 +1266,7 @@ function Agenda({ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalS
     </>)}
   </>);
 }
-function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn, onEditItem, onAdd, onAddSub, onTogglePaid, onReport, setAsidePct }) {
+function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn, onEditItem, onAdd, onAddSub, onAddObl, onTogglePaid, onReport, setAsidePct }) {
   const inP = (x) => { if (period === "all") return true; const d = new Date(x.dateISO + "T00:00:00"); const n = new Date(); if (period === "year") return d.getFullYear() === n.getFullYear(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); };
   const view = txns.filter(inP).sort((a, b) => b.dateISO.localeCompare(a.dateISO));
   const income = view.filter((x) => x.kind === "income").reduce((s, x) => s + x.amount, 0);
@@ -1304,7 +1293,7 @@ function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg,
         <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>ⓘ {t.tax_disc}</div>
       </div>);
     })()}
-    {obligations.length > 0 && (<><SectionLabel>{t.money_topay}</SectionLabel><Card>{obligations.map((o) => { const d = daysUntil(o.dateISO); const col = o.done ? C.mute : d == null ? C.mute : d <= 3 ? C.red : d <= 14 ? C.gold : C.mute; return <ItemRow key={o.id} it={o} lang={lang} onOpen={onEditItem} right={money(o.amount, loc)} sub={o.done ? t.paid_label : (d != null ? (d <= 0 ? t.due_today : t.due_in.replace("{n}", d)) : o.dateLabel)} subColor={col} check toggle={() => onTogglePaid(o.id)} />; })}</Card></>)}
+    <SectionLabel>{t.money_topay}</SectionLabel><Card>{obligations.length === 0 ? <Empty>{lang === "es" ? "Sin biles aún. Agrega renta, celular, internet…" : "No bills yet. Add rent, phone, internet…"}</Empty> : obligations.map((o) => { const d = daysUntil(o.dateISO); const col = o.done ? C.mute : d == null ? C.mute : d <= 3 ? C.red : d <= 14 ? C.gold : C.mute; return <ItemRow key={o.id} it={o} lang={lang} onOpen={onEditItem} right={money(o.amount, loc)} sub={(o.repeat === "monthly" ? (lang === "es" ? "Mensual · " : "Monthly · ") : "") + (o.done ? t.paid_label : (d != null ? (d <= 0 ? t.due_today : t.due_in.replace("{n}", d)) : o.dateLabel))} subColor={col} check toggle={() => onTogglePaid(o.id)} />; })}</Card><button onClick={onAddObl} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", marginTop: 10, padding: "12px", borderRadius: 14, border: `1px dashed ${C.border}`, background: C.surface, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 13.5, fontWeight: 600 }}>＋ {lang === "es" ? "Agregar bil (renta, celular, internet…)" : "Add bill (rent, phone, internet…)"}</button>
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, margin: "18px 0 4px" }}><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{[["txns", t.seg_txns], ["subs", t.seg_subs], ["cats", t.seg_cats], ["accts", t.seg_accts]].map(([k, lbl]) => (<button key={k} onClick={() => setFseg(k)} style={{ padding: "7px 12px", borderRadius: 10, cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: fseg === k ? 600 : 400, background: fseg === k ? C.surface2 : "transparent", color: fseg === k ? C.text : C.mute, border: `1px solid ${fseg === k ? C.border : "transparent"}`, whiteSpace: "nowrap" }}>{lbl}</button>))}</div><button onClick={fseg === "subs" ? onAddSub : onAdd} style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 999, border: "none", background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusSm /></button></div>
     {fseg === "txns" && <Card>{view.length === 0 ? <Empty>{t.none_txns}</Empty> : view.map((x) => { const meta = x.kind === "income" ? incBy(x.cat) : catBy(x.cat); return (<div key={x.id} onClick={() => onEditTxn(x)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}`, cursor: "pointer", background: x.id === recentId ? "rgba(229,72,77,.08)" : "transparent" }}><div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}><SubLogo title={x.note || meta[lang === "es" ? "es" : "en"]} logo={x.logo} C={C} size={36} /><div style={{ minWidth: 0 }}><div style={{ fontSize: 15 }}>{x.note || meta[lang === "es" ? "es" : "en"]}</div><div style={{ fontSize: 11.5, color: C.mute, marginTop: 3 }}>{meta[lang === "es" ? "es" : "en"]} · {x.account === "personal" ? (lang === "es" ? "Empleado" : "Employee") : x.account === "business" ? (lang === "es" ? "Contratista" : "Contractor") : acctBy(x.account).label} · {fmtDate(x.dateISO, lang)}{x.kind === "expense" && dedAmount(x) > 0 ? "  · ✓" : ""}</div></div></div><div className="num" style={{ fontSize: 15, color: x.kind === "income" ? C.green : C.text, flexShrink: 0 }}>{x.kind === "income" ? "+" : "−"}{money(x.amount, loc)}</div></div>); })}</Card>}
     {fseg === "cats" && <Card>{catT.length === 0 ? <Empty>{t.none_txns}</Empty> : catT.map(({ c, total, ded }) => (<div key={c.k} style={{ padding: "12px 0", borderBottom: `1px solid ${C.borderSoft}` }}><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><div style={{ display: "flex", gap: 11, alignItems: "center" }}><span style={{ width: 9, height: 9, borderRadius: 999, background: c.color }} /><span style={{ fontSize: 15 }}>{c[lang === "es" ? "es" : "en"]}</span></div><div className="num" style={{ fontSize: 15 }}>{money(total, loc)}</div></div><div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, paddingLeft: 20, flexWrap: "wrap" }}><span style={{ fontSize: 10, letterSpacing: "0.05em", textTransform: "uppercase", color: c.ded === "none" ? C.mute : C.gold, border: `1px solid ${c.ded === "none" ? C.border : C.goldSoft}`, borderRadius: 6, padding: "1px 7px" }}>{dlabel(c.ded)}</span>{ded > 0 && <span style={{ fontSize: 11.5, color: C.gold }}>{money(ded, loc)} · {c.line}</span>}</div></div>))}</Card>}
@@ -1397,11 +1386,11 @@ function Car({ t, lang, loc, vehicle, records, onEditVehicle, onAddRecord, onEdi
   </>);
 }
 function Notes({ t, lang, notes, recentId, onEdit }) { return (<><SectionLabel>{t.nav_notes}</SectionLabel><Card>{notes.length === 0 ? <Empty>{t.notes_none}</Empty> : notes.map((b) => <ItemRow key={b.id} it={b} lang={lang} recent={b.id === recentId} onOpen={onEdit} typeTag={t["type_" + b.type]} sub={b.detail} />)}</Card></>); }
-function Capture({ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto, openWhatsapp, recent }) {
+function Capture({ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto, recent }) {
   return (<div style={{ marginTop: 4 }}>
     <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.02em", marginTop: 8 }}>{t.cap_title}</div>
     <div style={{ fontSize: 14, color: C.dim, marginTop: 8, lineHeight: 1.5, maxWidth: 360 }}>{t.cap_sub}</div>
-    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 22 }}><BigBtn onClick={openVoice} icon={<MicIcon big />} title={t.cap_speak} primary /><BigBtn onClick={openPhoto} icon={<CamIcon big />} title={t.cap_photo} /><BigBtn onClick={openWhatsapp} icon={<WaIcon />} title="WhatsApp" /></div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 22 }}><BigBtn onClick={openVoice} icon={<MicIcon big />} title={t.cap_speak} primary /><BigBtn onClick={openPhoto} icon={<CamIcon big />} title={t.cap_photo} /></div>
     <div style={{ display: "flex", alignItems: "center", background: C.surface2, border: `1px solid ${C.border}`, borderRadius: 999, padding: "5px 6px 5px 18px", marginTop: 16 }}><input className="ph" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && processCapture(input)} placeholder={t.ph_idle} style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontSize: 15, fontFamily: SF, minWidth: 0 }} /><button onClick={() => processCapture(input)} disabled={processing || !input.trim()} style={{ width: 40, height: 40, borderRadius: 999, border: "none", cursor: !input.trim() ? "default" : "pointer", background: input.trim() ? C.gold : "#34343c", color: input.trim() ? C.bg : C.mute, display: "flex", alignItems: "center", justifyContent: "center" }}>{processing ? <Spinner /> : <ArrowIcon />}</button></div>
     {recent.length > 0 && <><SectionLabel>{t.cap_recent}</SectionLabel><Card>{recent.map((it) => (it.kind ? <div key={it.id} style={{ display: "flex", justifyContent: "space-between", padding: "11px 0", borderBottom: `1px solid ${C.borderSoft}` }}><div style={{ fontSize: 15 }}>{it.note}</div><div className="num" style={{ fontSize: 14, color: it.kind === "income" ? C.green : C.text }}>{it.kind === "income" ? "+" : "−"}{money(it.amount, lang === "es" ? "es-MX" : "en-US")}</div></div> : <ItemRow key={it.id} it={it} lang={lang} sub={it.detail || it.dateLabel} />))}</Card></>}
   </div>);

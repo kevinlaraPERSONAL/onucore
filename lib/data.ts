@@ -25,6 +25,7 @@ function itemToRow(it: Any, userId: string) {
     person: it.person ?? "",
     priority: it.priority ?? "medium",
     done: !!it.done,
+    repeat: it.repeat ?? null,
     photo_url: it.photo ?? it.photo_url ?? null,
     source: it.source ?? "app",
   };
@@ -34,7 +35,7 @@ function itemFromRow(r: Any) {
     id: r.id, type: r.type, area: r.area, title: r.title, detail: r.detail ?? "",
     amount: r.amount === null ? null : Number(r.amount),
     dateISO: r.date_iso ?? null, dateLabel: r.date_label ?? "", person: r.person ?? "",
-    priority: r.priority ?? "medium", done: !!r.done, photo: r.photo_url ?? null,
+    priority: r.priority ?? "medium", done: !!r.done, repeat: r.repeat ?? null, photo: r.photo_url ?? null,
     source: r.source ?? "app",
   };
 }

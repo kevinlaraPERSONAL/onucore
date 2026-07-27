@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 import * as db from "@/lib/data";
 import OcIcon from "./OcIcon";
 import PlaidBankSection from "./PlaidBankSection";
+import PushCard from "./PushCard";
 import SubLogo from "./SubLogo";
 
 // onucore AI — App consolidada (mobile-first)
@@ -788,6 +789,7 @@ ${JSON.stringify(snapshot)}`;
 
 
         <div style={{ padding: "8px 20px 0" }}>
+          {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
           {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
@@ -948,7 +950,7 @@ ${JSON.stringify(snapshot)}`;
               <SectionLabel>{t.sec_settings}</SectionLabel>
               <div style={cardS}>
                 <PField label={t.set_lang}><div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{LANGS.map((l) => <Chip key={l.code} label={l.label} color={C.gold} on={l.code === lang} onClick={() => setLang(l.code)} />)}</div></PField>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}><span style={{ fontSize: 14.5 }}>{t.set_notif}</span><button onClick={() => setProfile((p) => ({ ...p, notif: !p.notif }))} style={{ width: 46, height: 27, borderRadius: 999, border: `1px solid ${profile.notif ? C.gold : C.border}`, background: profile.notif ? C.gold : C.surface2, position: "relative", cursor: "pointer" }}><span style={{ position: "absolute", top: 2, left: profile.notif ? 21 : 2, width: 21, height: 21, borderRadius: 999, background: profile.notif ? C.bg : C.mute, transition: "left .2s" }} /></button></div>
+                <PushCard lang={lang} variant="row" C={C} SF={SF} />
                 <PField label={t.set_brieflen}><div style={{ display: "flex", gap: 8 }}>{[["short", t.bl_short], ["detailed", t.bl_detailed]].map(([k, lbl]) => <Chip key={k} label={lbl} color={C.gold} on={profile.briefLen === k} onClick={() => setProfile((p) => ({ ...p, briefLen: k }))} />)}</div></PField>
                 <PField label={t.set_acct}><div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>{ACCOUNTS.map((a) => <Chip key={a.k} label={a.label} color={C.gold} on={profile.defaultAccount === a.k} onClick={() => setProfile((p) => ({ ...p, defaultAccount: a.k }))} />)}</div></PField>
                 <PField label={`${t.set_taxpct}: ${profile.setAsidePct}%`}><input type="range" min="10" max="45" value={profile.setAsidePct} onChange={(e) => setProfile((p) => ({ ...p, setAsidePct: +e.target.value }))} style={{ width: "100%", accentColor: C.gold }} /></PField>

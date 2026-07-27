@@ -8,6 +8,7 @@ import PushCard from "./PushCard";
 import NudgesCard from "./NudgesCard";
 import BalanceCard from "./BalanceCard";
 import MonthReportCard from "./MonthReportCard";
+import AgentScreen from "./AgentScreen";
 import SubLogo from "./SubLogo";
 
 // onucore AI — App consolidada (mobile-first)
@@ -69,7 +70,7 @@ const ACCOUNTS = [{ k: "personal", label: "Empleado", type: "bank" }, { k: "busi
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", nav_places: "Favorite places", nav_calendar: "Calendar", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", nav_places: "Favorite places", nav_calendar: "Calendar", nav_agent: "Agent", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -106,7 +107,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", nav_places: "Mis lugares", nav_calendar: "Calendario", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", nav_places: "Mis lugares", nav_calendar: "Calendario", nav_agent: "Agente", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -908,7 +909,7 @@ ${JSON.stringify(snapshot)}`;
         <aside style={{ position: "fixed", left: 0, top: 0, width: 220, height: "100vh", background: C.surface, borderRight: `1px solid ${C.borderSoft}`, padding: "22px 14px 18px", display: "flex", flexDirection: "column", gap: 5, zIndex: 25, boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px 16px" }}><OcIcon size={26} ring="#8a9095" dot={C.red} /><span style={{ color: C.red, fontSize: 16, fontWeight: 700, letterSpacing: "0.18em" }}>AI</span></div>
           <button onClick={() => setTab("capture")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 12, border: "none", background: C.red, color: "#ffffff", cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}><PlusI /> {lang === "es" ? "Capturar" : "Capture"}</button>
-          {[["today", t.nav_today, <HomeI />], ["calendar", t.nav_calendar, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
+          {[["today", t.nav_today, <HomeI />], ["agent", t.nav_agent, <AgentI />], ["calendar", t.nav_calendar, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
         </aside>
       )}
       <div style={{ maxWidth: contentMax, marginLeft: desktop ? `max(220px, calc(220px + (100% - ${contentMax + 220}px) / 2))` : "auto", marginRight: "auto", minHeight: "100vh", position: "relative", paddingBottom: desktop ? 40 : 86 }}>
@@ -952,6 +953,7 @@ ${JSON.stringify(snapshot)}`;
           {tab === "money" && <Money {...{ t, lang, loc, txns: sTxns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
+          {tab === "agent" && <AgentScreen lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), recent }} />}
         </div>
@@ -1338,7 +1340,7 @@ ${JSON.stringify(snapshot)}`;
       {moreOpen && (
         <Sheet onClose={() => setMoreOpen(false)}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{t.nav_more}</div>
-          {[["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
+          {[["agent", t.nav_agent, <AgentI />], ["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
             <button key={id} onClick={() => { setTab(id); setMoreOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "15px 6px", border: "none", borderBottom: `1px solid ${C.borderSoft}`, background: "transparent", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 16, textAlign: "left" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim }}>{icon}</span>{label}</button>
           ))}
         </Sheet>
@@ -1622,6 +1624,7 @@ function Vault({ t, lang, docs, mediaUrls, isMedia, onView, onUpload, onOpen, on
 function CarI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 11l1.6-4A2 2 0 0 1 8.5 6h7a2 2 0 0 1 1.9 1.3L19 11M4 16h16M6 11h12a2 2 0 0 1 2 2v3H4v-3a2 2 0 0 1 2-2z" /><circle cx="7.5" cy="16.5" r="1.2" /><circle cx="16.5" cy="16.5" r="1.2" /></svg>); }
 function DatesI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v4M12 21c-3-3-6-6-6-10a6 6 0 0 1 12 0c0 4-3 7-6 10z" /><circle cx="12" cy="11" r="2" /></svg>); }
 function PlacesI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-7-7-7-13a7 7 0 0 1 14 0c0 6-7 13-7 13z" /><circle cx="12" cy="9" r="2.5" /></svg>); }
+function AgentI() { return (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="7" width="14" height="12" rx="3" /><path d="M9 12v1M15 12v1M12 3v4" /><circle cx="12" cy="3" r="0.8" fill="currentColor" /></svg>); }
 function Places({ t, lang, places, onAdd, onEdit }) {
   const es = lang === "es";
   const [cat, setCat] = useState("all");

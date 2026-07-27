@@ -46,7 +46,7 @@ Reglas:
   let finalText = "";
   for (let i = 0; i < MAX_ITER; i++) {
     const resp = await client.messages.create({
-      model: "claude-opus-4-8",
+      model: "claude-haiku-4-5",
       max_tokens: 4000,
       system: sys,
       tools: TOOL_SCHEMAS as unknown as Anthropic.Messages.Tool[],
@@ -71,7 +71,7 @@ Reglas:
           const q = (output as { query?: string }).query || "";
           try {
             const sub = await client.messages.create({
-              model: "claude-opus-4-8",
+              model: "claude-haiku-4-5",
               max_tokens: 1500,
               tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 3 } as unknown as Anthropic.Messages.Tool],
               messages: [{ role: "user", content: `Busca en internet y resume en 3-5 frases con datos concretos: ${q}` }],

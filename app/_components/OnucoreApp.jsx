@@ -202,6 +202,8 @@ export default function AtlasAI() {
   const [lang, setLang] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_lang"); if (s === "es" || s === "en") return s; } return "es"; });
   const [langOpen, setLangOpen] = useState(false);
   const [areaFilter, setAreaFilter] = useState("all");
+  const [scope, setScope] = useState(() => { if (typeof window !== "undefined") { const s = window.localStorage.getItem("onucore_scope"); if (s === "personal" || s === "work") return s; } return "all"; });
+  useEffect(() => { if (typeof window !== "undefined") window.localStorage.setItem("onucore_scope", scope); }, [scope]);
   const [input, setInput] = useState("");
   const [processing, setProcessing] = useState(false);
   const [briefing, setBriefing] = useState("");
@@ -438,9 +440,9 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   };
   const newEvent = () => setItemDraft({ id: uid(), type: "event", area: "work", title: "", dateISO: calSel, dateLabel: "", _new: true });
   const openTxn = (tx) => setTxnDraft({ ...tx, amount: String(tx.amount) });
-  const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: acctBy(profile.defaultAccount || "personal").k, note: "", ded: true, _new: true });
-  const newSub = () => setItemDraft({ id: uid(), type: "subscription", area: "personal", title: "", amount: "", dateISO: "", dateLabel: "monthly", _new: true });
-  const newObl = () => setItemDraft({ id: uid(), type: "obligation", area: "personal", title: "", amount: null, dateISO: todayISO(), repeat: "monthly", done: false, _new: true });
+  const newTxn = () => setTxnDraft({ id: uid(), kind: "expense", amount: "", dateISO: todayISO(), cat: "office", account: scope === "work" ? "business" : scope === "personal" ? "personal" : acctBy(profile.defaultAccount || "personal").k, note: "", ded: scope !== "personal", _new: true });
+  const newSub = () => setItemDraft({ id: uid(), type: "subscription", area: scope === "work" ? "work" : "personal", title: "", amount: "", dateISO: "", dateLabel: "monthly", _new: true });
+  const newObl = () => setItemDraft({ id: uid(), type: "obligation", area: scope === "work" ? "work" : "personal", title: "", amount: null, dateISO: todayISO(), repeat: "monthly", done: false, _new: true });
   const refreshDocs = async () => { const { data } = await supabase.from("documents").select("*").order("created_at", { ascending: false }); setDocs(data || []); };
   const isMedia = (d) => ((d.mime || "").startsWith("image/") || (d.mime || "").startsWith("video/"));
   // Signed thumbnails for the photo/video grid (private bucket → 1h links).
@@ -718,19 +720,25 @@ ${JSON.stringify(snapshot)}`;
   const exportData = () => { try { const blob = new Blob([JSON.stringify({ profile, items, txns }, null, 2)], { type: "application/json" }); const u = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = u; a.download = "atlas-data.json"; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(u); } catch {} };
 
   // derived
-  const events = items.filter((i) => i.type === "event");
-  const reminders = items.filter((i) => i.type === "reminder");
-  const tasks = items.filter((i) => i.type === "task" || i.type === "followup");
-  const obligations = items.filter((i) => i.type === "obligation").sort((a, b) => (a.dateISO || "9").localeCompare(b.dateISO || "9"));
-  const subs = items.filter((i) => i.type === "subscription");
-  const notes = items.filter((i) => i.type === "note" || i.type === "idea" || i.type === "contact");
-  const recent = [...items].slice(0, 3).concat([...txns].slice(0, 1));
+  // Global Personal / Work split: work = area "work" or the Oprinte account;
+  // personal = everything else (family & health count as personal life).
+  const inScopeItem = (i) => scope === "all" || (scope === "work" ? i.area === "work" : i.area !== "work");
+  const inScopeTxn = (x) => scope === "all" || (scope === "work" ? x.account === "business" : x.account !== "business");
+  const sItems = items.filter(inScopeItem);
+  const sTxns = txns.filter(inScopeTxn);
+  const events = sItems.filter((i) => i.type === "event");
+  const reminders = sItems.filter((i) => i.type === "reminder");
+  const tasks = sItems.filter((i) => i.type === "task" || i.type === "followup");
+  const obligations = sItems.filter((i) => i.type === "obligation").sort((a, b) => (a.dateISO || "9").localeCompare(b.dateISO || "9"));
+  const subs = sItems.filter((i) => i.type === "subscription");
+  const notes = sItems.filter((i) => i.type === "note" || i.type === "idea" || i.type === "contact");
+  const recent = [...sItems].slice(0, 3).concat([...sTxns].slice(0, 1));
   const alerts = (() => {
     const out = []; const es = lang === "es";
     const evByDay = {};
-    items.filter((i) => i.type === "event" && i.dateISO).forEach((e) => { (evByDay[e.dateISO] = evByDay[e.dateISO] || []).push(e); });
+    sItems.filter((i) => i.type === "event" && i.dateISO).forEach((e) => { (evByDay[e.dateISO] = evByDay[e.dateISO] || []).push(e); });
     Object.entries(evByDay).forEach(([d, evs]) => { const du = daysUntil(d); if (evs.length >= 2 && du != null && du >= 0 && du <= 7) out.push({ kind: "conflict", color: C.red, text: es ? `${evs.length} citas el ${fmtDate(d, lang)} — revisa que no se empalmen` : `${evs.length} appointments on ${fmtDate(d, lang)} — check for overlaps` }); });
-    items.filter((i) => i.type === "obligation").forEach((o) => { const du = daysUntil(o.dateISO); if (du != null && du >= 0 && du <= 3 && !o.done) out.push({ kind: "bill", color: C.gold, text: (es ? `${o.title} vence ${du <= 0 ? "hoy" : "en " + du + " día(s)"}` : `${o.title} due ${du <= 0 ? "today" : "in " + du + " day(s)"}`) + (o.amount ? ` · ${money(o.amount, loc)}` : "") }); });
+    sItems.filter((i) => i.type === "obligation").forEach((o) => { const du = daysUntil(o.dateISO); if (du != null && du >= 0 && du <= 3 && !o.done) out.push({ kind: "bill", color: C.gold, text: (es ? `${o.title} vence ${du <= 0 ? "hoy" : "en " + du + " día(s)"}` : `${o.title} due ${du <= 0 ? "today" : "in " + du + " day(s)"}`) + (o.amount ? ` · ${money(o.amount, loc)}` : "") }); });
     // Car: services/renewals due soon or overdue.
     const KIND_ES = { oil: "Cambio de aceite", registration: "Placas", insurance: "Seguro del carro", tires: "Llantas", brakes: "Frenos", inspection: "Inspección", service: "Servicio del carro" };
     const KIND_EN = { oil: "Oil change", registration: "Registration", insurance: "Car insurance", tires: "Tires", brakes: "Brakes", inspection: "Inspection", service: "Car service" };
@@ -747,8 +755,8 @@ ${JSON.stringify(snapshot)}`;
     // Subscriptions renewing in the next 3 days.
     subs.forEach((s) => { if (!s.dateISO) return; const du = daysUntil(nextRenewal(s.dateISO, s.dateLabel)); if (du != null && du >= 0 && du <= 3) out.push({ kind: "sub", color: C.gold, text: (es ? `${s.title} se renueva ${du === 0 ? "hoy" : "en " + du + " día(s)"}` : `${s.title} renews ${du === 0 ? "today" : "in " + du + " day(s)"}`) + (s.amount ? ` · ${money(Number(s.amount) || 0, loc)}` : "") }); });
     const m = new Date(); const inMonth = (iso) => { const dt = new Date(iso + "T00:00:00"); return dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth(); };
-    const mInc = txns.filter((x) => x.kind === "income" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
-    const mExp = txns.filter((x) => x.kind === "expense" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
+    const mInc = sTxns.filter((x) => x.kind === "income" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
+    const mExp = sTxns.filter((x) => x.kind === "expense" && inMonth(x.dateISO)).reduce((s, x) => s + x.amount, 0);
     if (mExp > mInc && mExp > 0) out.push({ kind: "spend", color: C.red, text: es ? `Este mes gastaste ${money(mExp - mInc, loc)} más de lo que ingresaste` : `This month you spent ${money(mExp - mInc, loc)} more than you earned` });
     return out;
   })();
@@ -789,11 +797,20 @@ ${JSON.stringify(snapshot)}`;
         </div>
 
 
+        {["today", "money", "notes", "agenda"].includes(tab) && (
+          <div style={{ display: "flex", justifyContent: "center", padding: "10px 20px 0" }}>
+            <div style={{ display: "flex", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 999, padding: 3, gap: 2 }}>
+              {[["all", lang === "es" ? "Todo" : "All"], ["personal", "Personal"], ["work", lang === "es" ? "Trabajo" : "Work"]].map(([k, lbl]) => (
+                <button key={k} onClick={() => setScope(k)} style={{ padding: "7px 16px", borderRadius: 999, border: "none", cursor: "pointer", fontFamily: SF, fontSize: 12.5, fontWeight: scope === k ? 600 : 400, background: scope === k ? C.red : "transparent", color: scope === k ? "#ffffff" : C.dim }}>{lbl}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
-          {tab === "agenda" && <Agenda {...{ t, lang, items, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
-          {tab === "money" && <Money {...{ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
+          {tab === "agenda" && <Agenda {...{ t, lang, items: sItems, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
+          {tab === "money" && <Money {...{ t, lang, loc, txns: sTxns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}

@@ -69,7 +69,7 @@ const ACCOUNTS = [{ k: "personal", label: "Empleado", type: "bank" }, { k: "busi
 
 const STR = {
   en: {
-    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", nav_places: "Favorite places", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
+    nav_today: "Today", nav_agenda: "Agenda", nav_capture: "Add", nav_chat: "Chat", nav_money: "Money", nav_notes: "Notes", nav_vault: "Vault", nav_more: "More", nav_car: "My car", nav_dates: "Important dates", nav_radar: "Spending radar", nav_places: "Favorite places", nav_calendar: "Calendar", doc_all: "All", doc_upload: "Upload", doc_none: "No documents yet.", doc_sub: "Keep your important papers safe", cat_tax: "Taxes", cat_receipt: "Receipts", cat_insurance: "Insurance", cat_id: "IDs", cat_other: "Other", cat_media: "Photos & videos", vault_media: "Photos & videos", vault_docs: "Documents", area_all: "All",
     briefing_label: "Daily briefing", regenerate: "Regenerate",
     today_attention: "Needs your attention", today_appts: "Today's appointments", today_todo: "To-do & reminders", today_bills: "Bills due soon", today_clear: "Nothing pressing. You're clear.",
     cal_connect: "Connect", ev_new: "New event", f_time: "Time", f_area: "Area",
@@ -106,7 +106,7 @@ const STR = {
     set_brieflen: "Briefing length", bl_short: "Short", bl_detailed: "Detailed", set_remstyle: "Reminder style", rs_gentle: "Gentle", rs_firm: "Insistent", set_channel: "Preferred alert channel",
   },
   es: {
-    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", nav_places: "Mis lugares", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
+    nav_today: "Hoy", nav_agenda: "Agenda", nav_capture: "Agregar", nav_chat: "Chat", nav_money: "Dinero", nav_notes: "Notas", nav_vault: "Bóveda", nav_more: "Más", nav_car: "Mi carro", nav_dates: "Fechas importantes", nav_radar: "Radar de gastos", nav_places: "Mis lugares", nav_calendar: "Calendario", doc_all: "Todos", doc_upload: "Subir", doc_none: "Sin documentos aún.", doc_sub: "Guarda tus papeles importantes seguros", cat_tax: "Impuestos", cat_receipt: "Recibos", cat_insurance: "Seguros", cat_id: "IDs", cat_other: "Otros", cat_media: "Fotos y videos", vault_media: "Fotos y videos", vault_docs: "Documentos", area_all: "Todo",
     briefing_label: "Briefing del día", regenerate: "Regenerar",
     today_attention: "Requiere tu atención", today_appts: "Citas de hoy", today_todo: "Pendientes y recordatorios", today_bills: "Pagos próximos", today_clear: "Nada urgente. Estás al día.",
     cal_connect: "Conectar", ev_new: "Nuevo evento", f_time: "Hora", f_area: "Área",
@@ -239,6 +239,7 @@ export default function AtlasAI() {
   const [review, setReview] = useState(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [calSub, setCalSub] = useState("cal");
   const [reportYear, setReportYear] = useState(YEAR);
   // calendar
   const now0 = new Date();
@@ -907,7 +908,7 @@ ${JSON.stringify(snapshot)}`;
         <aside style={{ position: "fixed", left: 0, top: 0, width: 220, height: "100vh", background: C.surface, borderRight: `1px solid ${C.borderSoft}`, padding: "22px 14px 18px", display: "flex", flexDirection: "column", gap: 5, zIndex: 25, boxSizing: "border-box" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "0 8px 16px" }}><OcIcon size={26} ring="#8a9095" dot={C.red} /><span style={{ color: C.red, fontSize: 16, fontWeight: 700, letterSpacing: "0.18em" }}>AI</span></div>
           <button onClick={() => setTab("capture")} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px 14px", borderRadius: 12, border: "none", background: C.red, color: "#ffffff", cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: 600, marginBottom: 6 }}><PlusI /> {lang === "es" ? "Capturar" : "Capture"}</button>
-          {[["today", t.nav_today, <HomeI />], ["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
+          {[["today", t.nav_today, <HomeI />], ["calendar", t.nav_calendar, <CalI />], ["chat", t.nav_chat, <ChatI />], ["money", t.nav_money, <WalletI />], ["vault", t.nav_vault, <VaultI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => { const on = tab === id; return (<button key={id} onClick={() => setTab(id)} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 12px", borderRadius: 11, border: "none", background: on ? "rgba(229,72,77,.13)" : "transparent", color: on ? C.red : C.dim, cursor: "pointer", fontFamily: SF, fontSize: 14.5, fontWeight: on ? 600 : 500, textAlign: "left", width: "100%" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{icon}</span>{label}</button>); })}
         </aside>
       )}
       <div style={{ maxWidth: contentMax, marginLeft: desktop ? `max(220px, calc(220px + (100% - ${contentMax + 220}px) / 2))` : "auto", marginRight: "auto", minHeight: "100vh", position: "relative", paddingBottom: desktop ? 40 : 86 }}>
@@ -918,12 +919,13 @@ ${JSON.stringify(snapshot)}`;
               <button onClick={() => setLangOpen((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 999, padding: "7px 12px", fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: SF }}><GlobeIcon /> {L.short}</button>
               {langOpen && (<div className="rise" style={{ position: "absolute", right: 0, top: 42, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, padding: 6, minWidth: 150, zIndex: 30, boxShadow: "0 18px 40px rgba(0,0,0,.45)" }}>{LANGS.map((l) => (<button key={l.code} onClick={() => { setLang(l.code); setLangOpen(false); if (typeof window !== "undefined") window.localStorage.setItem("onucore_lang", l.code); }} style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", background: l.code === lang ? C.surface2 : "transparent", border: "none", color: l.code === lang ? C.gold : C.text, padding: "10px 12px", borderRadius: 9, fontSize: 14, cursor: "pointer", fontFamily: SF }}><span>{l.label}</span><span style={{ fontSize: 11, color: C.mute }}>{l.short}</span></button>))}</div>)}
             </div>
+            <button onClick={() => setTab("vault")} aria-label={t.nav_vault} title={t.nav_vault} style={{ width: 36, height: 36, borderRadius: 999, border: `1px solid ${C.border}`, background: tab === "vault" ? "rgba(229,72,77,.13)" : "transparent", color: tab === "vault" ? C.red : C.dim, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}><VaultI /></button>
             <button onClick={() => setProfileOpen(true)} aria-label="Profile" style={{ width: 36, height: 36, borderRadius: 999, border: `1px solid ${C.border}`, padding: 0, overflow: "hidden", cursor: "pointer", flexShrink: 0, background: profile.photo ? "transparent" : C.gold, color: "#ffffff", fontWeight: 700, fontFamily: SF, display: "flex", alignItems: "center", justifyContent: "center" }}>{profile.photo ? <img src={profile.photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (profile.name ? profile.name[0].toUpperCase() : "A")}</button>
           </div>
         </div>
 
 
-        {["today", "money", "notes", "agenda"].includes(tab) && (
+        {["today", "money", "notes", "calendar"].includes(tab) && (
           <div style={{ display: "flex", justifyContent: "center", padding: "10px 20px 0" }}>
             <div style={{ display: "flex", background: C.surface, border: `1px solid ${C.border}`, borderRadius: 999, padding: 3, gap: 2 }}>
               {[["all", lang === "es" ? "Todo" : "All"], ["personal", "Personal"], ["work", lang === "es" ? "Trabajo" : "Work"]].map(([k, lbl]) => (
@@ -941,13 +943,16 @@ ${JSON.stringify(snapshot)}`;
           {tab === "today" && <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />}
           {tab === "today" && scope !== "work" && <JournalCard lang={lang} entry={todayJournal} onOpen={openJournal} C={C} SF={SF} />}
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
-          {tab === "agenda" && <Agenda {...{ t, lang, items: sItems, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
+          {tab === "calendar" && (<>
+            <div style={{ display: "flex", gap: 8, marginTop: 6, marginBottom: 6, overflowX: "auto", paddingBottom: 2 }}>{[["cal", t.nav_calendar], ["dates", t.nav_dates], ["places", t.nav_places]].map(([k, lbl]) => (<button key={k} onClick={() => setCalSub(k)} style={{ flexShrink: 0, padding: "8px 15px", borderRadius: 999, cursor: "pointer", fontFamily: SF, fontSize: 13, fontWeight: calSub === k ? 600 : 500, background: calSub === k ? C.red : "transparent", color: calSub === k ? "#ffffff" : C.dim, border: `1px solid ${calSub === k ? C.red : C.border}`, whiteSpace: "nowrap" }}>{lbl}</button>))}</div>
+            {calSub === "cal" && <Agenda {...{ t, lang, items: sItems, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
+            {calSub === "dates" && <Dates {...{ t, lang, dates: importantDates, onAdd: () => setDateDraft({ title: "", mmdd: "", relation: "" }), onEdit: (d) => setDateDraft({ id: d.id, title: d.title, mmdd: d.dateLabel || (d.dateISO || "").slice(5), relation: d.person || "" }) }} />}
+            {calSub === "places" && <Places {...{ t, lang, places: favoritePlaces, onAdd: () => setPlaceDraft({ title: "", category: "restaurante", area: scope === "work" ? "work" : "personal", detail: "" }), onEdit: (p) => setPlaceDraft({ id: p.id, title: p.title, category: p.person || "restaurante", area: p.area, detail: p.detail || "" }) }} />}
+          </>)}
           {tab === "money" && <Money {...{ t, lang, loc, txns: sTxns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
           {tab === "vault" && <Vault {...{ t, lang, docs, mediaUrls, isMedia, onView: (d) => setMediaView({ doc: d, url: mediaUrls[d.path] }), onUpload: () => docFileRef.current && docFileRef.current.click(), onOpen: openDoc, onDelete: deleteDoc }} />}
           {tab === "notes" && <Notes {...{ t, lang, notes: byArea(notes), recentId, onEdit: openEdit }} />}
           {tab === "car" && <Car {...{ t, lang, loc, vehicle, records: carRecords, onEditVehicle: () => setVehDraft(vehicle ? { ...vehicle } : { make: "BMW", model: "X1" }), onAddRecord: () => setCarDraft({ kind: "oil", date_iso: todayISO(), due_iso: addMonthsISO(todayISO(), 6) }), onEditRecord: (r) => setCarDraft({ ...r }) }} />}
-          {tab === "dates" && <Dates {...{ t, lang, dates: importantDates, onAdd: () => setDateDraft({ title: "", mmdd: "", relation: "" }), onEdit: (d) => setDateDraft({ id: d.id, title: d.title, mmdd: d.dateLabel || (d.dateISO || "").slice(5), relation: d.person || "" }) }} />}
-          {tab === "places" && <Places {...{ t, lang, places: favoritePlaces, onAdd: () => setPlaceDraft({ title: "", category: "restaurante", area: scope === "work" ? "work" : "personal", detail: "" }), onEdit: (p) => setPlaceDraft({ id: p.id, title: p.title, category: p.person || "restaurante", area: p.area, detail: p.detail || "" }) }} />}
           {tab === "capture" && <Capture {...{ t, lang, input, setInput, processCapture, processing, openVoice, openPhoto: () => fileRef.current && fileRef.current.click(), recent }} />}
         </div>
       </div>
@@ -958,8 +963,8 @@ ${JSON.stringify(snapshot)}`;
           <Tab id="today" cur={tab} set={setTab} label={t.nav_today} icon={<HomeI />} />
           <Tab id="money" cur={tab} set={setTab} label={t.nav_money} icon={<WalletI />} />
           <button onClick={() => setTab("capture")} style={{ width: 54, height: 54, marginTop: -18, borderRadius: 999, border: `3px solid ${C.bg}`, background: C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}><PlusI /></button>
-          <Tab id="vault" cur={tab} set={setTab} label={t.nav_vault} icon={<VaultI />} />
-          <button onClick={() => setMoreOpen(true)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", fontFamily: SF, padding: "4px 10px", color: ["agenda", "chat", "notes"].includes(tab) ? C.gold : C.mute }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}><MoreI /></span><span style={{ fontSize: 10, fontWeight: ["agenda", "chat", "notes"].includes(tab) ? 600 : 400 }}>{t.nav_more}</span></button>
+          <Tab id="calendar" cur={tab} set={setTab} label={t.nav_calendar} icon={<CalI />} />
+          <button onClick={() => setMoreOpen(true)} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, background: "transparent", border: "none", cursor: "pointer", fontFamily: SF, padding: "4px 10px", color: ["chat", "car", "notes"].includes(tab) ? C.gold : C.mute }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center" }}><MoreI /></span><span style={{ fontSize: 10, fontWeight: ["chat", "car", "notes"].includes(tab) ? 600 : 400 }}>{t.nav_more}</span></button>
         </div>
       </div>
       )}
@@ -1333,7 +1338,7 @@ ${JSON.stringify(snapshot)}`;
       {moreOpen && (
         <Sheet onClose={() => setMoreOpen(false)}>
           <div style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{t.nav_more}</div>
-          {[["agenda", t.nav_agenda, <CalI />], ["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["dates", t.nav_dates, <DatesI />], ["places", t.nav_places, <PlacesI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
+          {[["chat", t.nav_chat, <ChatI />], ["car", t.nav_car, <CarI />], ["notes", t.nav_notes, <NoteI />]].map(([id, label, icon]) => (
             <button key={id} onClick={() => { setTab(id); setMoreOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 13, width: "100%", padding: "15px 6px", border: "none", borderBottom: `1px solid ${C.borderSoft}`, background: "transparent", color: C.text, cursor: "pointer", fontFamily: SF, fontSize: 16, textAlign: "left" }}><span style={{ width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", color: C.dim }}>{icon}</span>{label}</button>
           ))}
         </Sheet>

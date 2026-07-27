@@ -5,6 +5,7 @@ import * as db from "@/lib/data";
 import OcIcon from "./OcIcon";
 import PlaidBankSection from "./PlaidBankSection";
 import PushCard from "./PushCard";
+import NudgesCard from "./NudgesCard";
 import SubLogo from "./SubLogo";
 
 // onucore AI — App consolidada (mobile-first)
@@ -919,6 +920,7 @@ ${JSON.stringify(snapshot)}`;
         )}
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
+          {tab === "today" && <NudgesCard lang={lang} C={C} SF={SF} onApplied={async () => { const d = await db.loadAll(supabase, userId); if (d) { setItems(d.items); setTxns(d.txns); } }} />}
           {tab === "today" && <WeekPlanCard lang={lang} plan={weekPlan} onLoad={loadWeekPlan} C={C} SF={SF} />}
           {tab === "today" && <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />}
           {tab === "today" && scope !== "work" && <JournalCard lang={lang} entry={todayJournal} onOpen={openJournal} C={C} SF={SF} />}

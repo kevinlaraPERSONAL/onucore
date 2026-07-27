@@ -74,7 +74,7 @@ const STR = {
     money_topay: "To pay", seg_txns: "Activity", seg_cats: "Categories", seg_accts: "Accounts", money_add: "Add income / expense", report: "Accountant report", none_txns: "Nothing here yet.",
     seg_subs: "Subscriptions", sub_new: "New subscription", sub_cycle: "Billing", sub_monthly: "Monthly", sub_yearly: "Yearly", sub_weekly: "Weekly", sub_renews: "Renews", sub_permo: "/mo", sub_amonth: "per month", none_subs: "No subscriptions yet.", paid_label: "Paid", sub_name_ph: "Netflix, gym, software…",
     add_income: "Income", add_expense: "Expense", scan_receipt: "Scan receipt", scanning: "Reading receipt…", f_amount: "Amount", f_cat: "Category", f_acct: "Account", f_note: "Note (optional)", f_date: "Date", f_ded: "Tax-deductible", save: "Save", del: "Delete",
-    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Independent contractor (Schedule C)", rep_personal: "Employee (W-2)", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "As an employee you don't deduct business expenses.", rep_wages: "W-2 wages", rep_forms: "Tax forms {y}", rep_forms_add: "Add form", rep_docs: "Documents for your accountant", rep_no_forms: "No forms yet.", rep_no_docs: "No tax documents yet — tag them as “Taxes” in the Vault.", form_kind: "Type", form_payer: "Payer", form_amount: "Amount", form_withheld: "Federal tax withheld",
+    rep_title: "Tax year {y} — for your accountant", rep_income: "Total income", rep_expenses: "Total expenses", rep_ded: "Total deductible", rep_by: "Deductible by Schedule C line", rep_export: "Export CSV", rep_close: "Close", rep_share: "Share", rep_copied: "Report copied to clipboard", rep_disc: "Guide only — not tax advice. Confirm with your accountant.", rep_biz: "Independent contractor (Schedule C)", rep_personal: "Employee (W-2)", rep_biz_income: "Business income", rep_biz_expenses: "Business expenses", rep_net: "Net business profit", rep_pers_note: "As an employee you don't deduct business expenses.", rep_wages: "W-2 wages", rep_forms: "Tax forms {y}", rep_forms_add: "Add form", rep_docs: "Documents for your accountant", rep_no_forms: "No forms yet.", rep_no_docs: "No tax documents yet — tag them as “Taxes” in the Vault.", form_kind: "Type", form_payer: "Payer", form_amount: "Amount", form_withheld: "Federal tax withheld", rep_match: "1099 vs deposits", rep_match_ok: "matched", rep_match_missing: "missing", rep_match_extra: "extra",
     ded_full: "Deductible", ded_meals50: "50% deductible", ded_partial: "Business-use only", ded_none: "Not deductible",
     notes_none: "Your notes and ideas appear here.",
     cap_title: "Add anything", cap_sub: "Speak, snap a photo, or type — in any language. onucore files it where it belongs.", cap_speak: "Speak", cap_photo: "Photo reminder", cap_recent: "Just added",
@@ -111,7 +111,7 @@ const STR = {
     money_topay: "Por pagar", seg_txns: "Movimientos", seg_cats: "Categorías", seg_accts: "Cuentas", money_add: "Agregar ingreso / gasto", report: "Reporte para contador", none_txns: "Nada aquí todavía.",
     seg_subs: "Suscripciones", sub_new: "Nueva suscripción", sub_cycle: "Ciclo", sub_monthly: "Mensual", sub_yearly: "Anual", sub_weekly: "Semanal", sub_renews: "Renueva", sub_permo: "/mes", sub_amonth: "al mes", none_subs: "Sin suscripciones aún.", paid_label: "Pagado", sub_name_ph: "Netflix, gym, software…",
     add_income: "Ingreso", add_expense: "Gasto", scan_receipt: "Escanear recibo", scanning: "Leyendo recibo…", f_amount: "Monto", f_cat: "Categoría", f_acct: "Cuenta", f_note: "Nota (opcional)", f_date: "Fecha", f_ded: "Deducible de impuestos", save: "Guardar", del: "Eliminar",
-    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Contratista Externo (Schedule C)", rep_personal: "Empleado (W-2)", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Como empleado no deduces gastos de negocio.", rep_wages: "Salarios W-2", rep_forms: "Formas de impuestos {y}", rep_forms_add: "Agregar forma", rep_docs: "Documentos para el contador", rep_no_forms: "Sin formas aún.", rep_no_docs: "Sin documentos fiscales — márcalos como “Impuestos” en la Bóveda.", form_kind: "Tipo", form_payer: "Pagador", form_amount: "Monto", form_withheld: "Retención federal",
+    rep_title: "Año fiscal {y} — para tu contador", rep_income: "Ingresos totales", rep_expenses: "Gastos totales", rep_ded: "Total deducible", rep_by: "Deducible por línea del Schedule C", rep_export: "Exportar CSV", rep_close: "Cerrar", rep_share: "Compartir", rep_copied: "Reporte copiado al portapapeles", rep_disc: "Solo guía — no es asesoría fiscal. Confirma con tu contador.", rep_biz: "Contratista Externo (Schedule C)", rep_personal: "Empleado (W-2)", rep_biz_income: "Ingresos de negocio", rep_biz_expenses: "Gastos de negocio", rep_net: "Utilidad neta de negocio", rep_pers_note: "Como empleado no deduces gastos de negocio.", rep_wages: "Salarios W-2", rep_forms: "Formas de impuestos {y}", rep_forms_add: "Agregar forma", rep_docs: "Documentos para el contador", rep_no_forms: "Sin formas aún.", rep_no_docs: "Sin documentos fiscales — márcalos como “Impuestos” en la Bóveda.", form_kind: "Tipo", form_payer: "Pagador", form_amount: "Monto", form_withheld: "Retención federal", rep_match: "1099 vs depósitos", rep_match_ok: "cuadrado", rep_match_missing: "falta", rep_match_extra: "extra",
     ded_full: "Deducible", ded_meals50: "50% deducible", ded_partial: "Solo uso de negocio", ded_none: "No deducible",
     notes_none: "Tus notas e ideas aparecerán aquí.",
     cap_title: "Agrega lo que sea", cap_sub: "Habla, toma una foto o escribe — en cualquier idioma. onucore lo acomoda donde va.", cap_speak: "Hablar", cap_photo: "Recordatorio con foto", cap_recent: "Recién agregado",
@@ -259,6 +259,20 @@ export default function AtlasAI() {
   const [carDraft, setCarDraft] = useState(null);
   const [dateDraft, setDateDraft] = useState(null);
   const [radar, setRadar] = useState({ loading: false, text: null, at: 0 });
+  const [weekPlan, setWeekPlan] = useState({ loading: false, text: null, at: 0 });
+  const loadWeekPlan = async () => {
+    if (weekPlan.loading) return;
+    setWeekPlan((w) => ({ ...w, loading: true }));
+    try {
+      const r = await fetch("/api/plan-week", { method: "POST" });
+      const d = await r.json();
+      setWeekPlan({ loading: false, text: d.text || null, at: Date.now() });
+    } catch { setWeekPlan({ loading: false, text: null, at: Date.now() }); }
+  };
+  const [journalOpen, setJournalOpen] = useState(false);
+  const [journalText, setJournalText] = useState("");
+  const [journalListening, setJournalListening] = useState(false);
+  const journalRecogRef = useRef(null);
   // finance
   const [period, setPeriod] = useState("year");
   const [fseg, setFseg] = useState("txns");
@@ -538,6 +552,50 @@ Si nada accionable: {"items":[]}.${userCtx()}`;
   };
   const importantDates = items.filter((i) => i.type === "birthday").slice().sort((a, b) => (a.dateISO || "9").localeCompare(b.dateISO || "9"));
   const deleteItem2 = (id) => { setItems((p) => p.filter((i) => i.id !== id)); db.deleteItem(supabase, id); };
+  const todayJournal = items.find((i) => i.type === "journal" && i.dateISO === todayISO());
+  const openJournal = () => {
+    setJournalText(todayJournal ? (todayJournal.detail || "") : "");
+    setJournalOpen(true);
+    setTimeout(() => {
+      if (typeof window === "undefined") return;
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
+      const r = new SR();
+      r.lang = L.speech;
+      r.continuous = true;
+      r.interimResults = true;
+      let base = todayJournal ? (todayJournal.detail || "") : "";
+      if (base && !base.endsWith(" ") && !base.endsWith("\n")) base += "\n\n";
+      r.onresult = (e) => {
+        let interim = "";
+        let finalT = "";
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t2 = e.results[i][0].transcript;
+          if (e.results[i].isFinal) finalT += t2;
+          else interim += t2;
+        }
+        if (finalT) base += finalT;
+        setJournalText(base + interim);
+      };
+      r.onend = () => setJournalListening(false);
+      try { r.start(); setJournalListening(true); journalRecogRef.current = r; } catch {}
+    }, 200);
+  };
+  const stopJournal = () => { const r = journalRecogRef.current; if (r) { try { r.stop(); } catch {} } setJournalListening(false); };
+  const saveJournal = async () => {
+    stopJournal();
+    const detail = journalText.trim();
+    if (!detail) { setJournalOpen(false); return; }
+    const sess = (await supabase.auth.getSession()).data.session;
+    const uid2 = userId || (sess && sess.user.id); if (!uid2) return;
+    const row = todayJournal
+      ? { ...todayJournal, detail }
+      : { id: uid(), type: "journal", area: "personal", title: fmtDate(todayISO(), lang), detail, dateISO: todayISO(), done: false };
+    setItems((p) => { const idx = p.findIndex((i) => i.id === row.id); return idx >= 0 ? p.map((i, k) => k === idx ? row : i) : [row, ...p]; });
+    db.upsertItem(supabase, row);
+    setJournalOpen(false); setJournalText("");
+    setToast({ kind: "ok", text: lang === "es" ? "Journal guardado" : "Journal saved" });
+  };
   const loadRadar = async () => {
     if (radar.loading) return;
     setRadar((r) => ({ ...r, loading: true }));
@@ -861,7 +919,9 @@ ${JSON.stringify(snapshot)}`;
         )}
         <div style={{ padding: "8px 20px 0" }}>
           {tab === "today" && <PushCard lang={lang} C={C} SF={SF} />}
+          {tab === "today" && <WeekPlanCard lang={lang} plan={weekPlan} onLoad={loadWeekPlan} C={C} SF={SF} />}
           {tab === "today" && <RadarCard lang={lang} radar={radar} onLoad={loadRadar} C={C} SF={SF} />}
+          {tab === "today" && scope !== "work" && <JournalCard lang={lang} entry={todayJournal} onOpen={openJournal} C={C} SF={SF} />}
           {tab === "today" && <Today {...{ t, lang, loc, briefing, briefingLoading, regenerate: () => generateBriefing(items), events: byArea(events).concat((gcalEvents || []).filter((e) => e.dateISO === todayISO()).map((e) => ({ id: e.id, type: "event", area: "work", title: e.title, dateISO: e.dateISO, dateLabel: e.time, source: "google" }))), tasks: byArea(tasks), reminders: byArea(reminders), obligations: byArea(obligations), recentId, toggleDone, onEdit: openEdit, alerts, askQ, setAskQ, askA, askLoading, onAsk: askAtlas, clearAsk: () => { setAskA(""); setAskQ(""); } }} />}
           {tab === "agenda" && <Agenda {...{ t, lang, items: sItems, calY, calM, calSel, calSrc, setCalSel, setCalSrc, setCalY, setCalM, newEvent, onEdit: openEdit, gcal, gcalEvents, connectGoogle, desktop }} />}
           {tab === "money" && <Money {...{ t, lang, loc, txns: sTxns, obligations, subs, period, setPeriod, fseg, setFseg, recentId, onEditTxn: openTxn, onEditItem: openEdit, onAdd: newTxn, onAddSub: newSub, onAddObl: newObl, onTogglePaid: toggleDone, onReport: () => setReportOpen(true), setAsidePct: profile.setAsidePct }} />}
@@ -1146,6 +1206,18 @@ ${JSON.stringify(snapshot)}`;
         </Sheet>
       )}
 
+      {journalOpen && (
+        <Sheet onClose={() => { stopJournal(); setJournalOpen(false); }}>
+          <div style={{ fontSize: 17, fontWeight: 600 }}>📝 {lang === "es" ? "Journal de hoy" : "Today's journal"}</div>
+          <div style={{ fontSize: 12, color: C.mute, marginTop: 4 }}>{fmtDate(todayISO(), lang)}</div>
+          <div style={{ display: "flex", justifyContent: "center", margin: "18px 0" }}>
+            <button onClick={() => journalListening ? stopJournal() : openJournal()} style={{ width: 78, height: 78, borderRadius: 999, border: "none", background: journalListening ? C.red : C.gold, color: "#ffffff", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, boxShadow: journalListening ? `0 0 0 8px ${C.red}22` : "none" }}>{journalListening ? "■" : "🎤"}</button>
+          </div>
+          <div style={{ fontSize: 12, color: journalListening ? C.red : C.mute, textAlign: "center", marginBottom: 14 }}>{journalListening ? (lang === "es" ? "Escuchando… toca para parar" : "Listening… tap to stop") : (lang === "es" ? "Toca para hablar" : "Tap to speak")}</div>
+          <textarea value={journalText} onChange={(e) => setJournalText(e.target.value)} placeholder={lang === "es" ? "¿Cómo te fue hoy? Habla o escribe…" : "How did today go? Speak or type…"} rows={7} style={{ ...obIn, resize: "vertical", fontFamily: SF, lineHeight: 1.5 }} />
+          <button onClick={saveJournal} style={{ ...btnGold, width: "100%", marginTop: 16 }}>{t.save}</button>
+        </Sheet>
+      )}
       {dateDraft && (
         <Sheet onClose={() => setDateDraft(null)}>
           <div style={{ fontSize: 17, fontWeight: 600 }}>{lang === "es" ? "Fecha importante" : "Important date"}</div>
@@ -1280,6 +1352,30 @@ ${JSON.stringify(snapshot)}`;
               <FieldLabel>{t.rep_forms.replace("{y}", reportYear)}</FieldLabel>
               <div style={cardS}>{yearForms.length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_forms}</div>) : yearForms.map((f) => (<div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14 }}><div style={{ minWidth: 0 }}><div>{f.kind}{f.payer ? ` · ${f.payer}` : ""}</div>{Number(f.withheld) > 0 ? (<div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>{t.form_withheld}: {money(Number(f.withheld) || 0, loc)}</div>) : null}</div><div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}><span className="num">{money(Number(f.amount) || 0, loc)}</span><button onClick={() => deleteTaxForm(f.id)} style={{ background: "transparent", border: "none", color: C.mute, cursor: "pointer", fontSize: 17, lineHeight: 1, fontFamily: SF }}>×</button></div></div>))}</div>
               <button onClick={() => setFormDraft({ kind: "1099-NEC", payer: "Aequalend", amount: "", withheld: "", year: YEAR })} style={{ ...btnGhost, width: "100%", marginTop: 8, fontSize: 13.5 }}>+ {t.rep_forms_add}</button>
+              {(() => {
+                // 1099 ↔ business-account income match: sums the year's income lines whose note
+                // contains the payer name, so the user can see if their deposits already cover
+                // the 1099 amount or if something is still missing.
+                const forms1099 = yearForms.filter((f) => f.kind && f.kind.startsWith("1099") && f.payer && Number(f.amount) > 0);
+                if (forms1099.length === 0) return null;
+                const bizIncomeYT = yT.filter((x) => x.kind === "income" && isBiz(x));
+                return (<>
+                  <FieldLabel>{t.rep_match}</FieldLabel>
+                  <div style={cardS}>{forms1099.map((f) => {
+                    const target = Number(f.amount) || 0;
+                    const payer = (f.payer || "").toLowerCase();
+                    const matched = bizIncomeYT.filter((x) => (x.note || "").toLowerCase().includes(payer)).reduce((s, x) => s + Number(x.amount || 0), 0);
+                    const diff = target - matched;
+                    const done = Math.abs(diff) < 1;
+                    const col = done ? C.green : diff > 0 ? C.gold : C.dim;
+                    const label = done ? t.rep_match_ok : diff > 0 ? `${t.rep_match_missing} ${money(diff, loc)}` : `${t.rep_match_extra} ${money(-diff, loc)}`;
+                    return (<div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 13.5 }}>
+                      <div style={{ minWidth: 0 }}><div>{f.kind} · {f.payer}</div><div style={{ fontSize: 11, color: C.mute, marginTop: 2 }}>{money(matched, loc)} / {money(target, loc)}</div></div>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: col, flexShrink: 0 }}>{done ? "✓ " : ""}{label}</span>
+                    </div>);
+                  })}</div>
+                </>);
+              })()}
               <FieldLabel>{t.rep_docs}</FieldLabel>
               <div style={cardS}>{docs.filter((d) => d.category === "tax").length === 0 ? (<div style={{ fontSize: 13, color: C.mute, padding: "6px 0" }}>{t.rep_no_docs}</div>) : docs.filter((d) => d.category === "tax").map((d) => (<div key={d.id} onClick={() => openDoc(d)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: `1px solid ${C.borderSoft}`, fontSize: 14, cursor: "pointer" }}><span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📄 {d.name}</span><span style={{ color: C.gold, fontSize: 12, flexShrink: 0 }}>{lang === "es" ? "Ver" : "View"}</span></div>))}</div>
               <div style={{ fontSize: 11, color: C.mute, marginTop: 12, lineHeight: 1.5 }}>ⓘ {t.rep_disc}</div>
@@ -1498,6 +1594,47 @@ function RadarCard({ lang, radar, onLoad, C, SF }) {
       {radar.loading ? (<div style={{ display: "flex", flexDirection: "column", gap: 8 }}><div className="shimmer" style={{ height: 14, borderRadius: 6, width: "94%" }} /><div className="shimmer" style={{ height: 14, borderRadius: 6, width: "72%" }} /></div>)
         : radar.text ? (<p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: C.text }}>{radar.text}</p>)
         : (<div style={{ fontSize: 13, color: C.mute }}>{es ? "Aún no hay suficientes movimientos para analizar." : "Not enough transactions yet."}</div>)}
+    </div>
+  );
+}
+function WeekPlanCard({ lang, plan, onLoad, C, SF }) {
+  const es = lang === "es";
+  const dow = new Date().getDay(); // 0=Sun, 1=Mon
+  const showBig = dow === 0 || dow === 1;
+  useEffect(() => {
+    if (!showBig || plan.text || plan.loading) return;
+    if (typeof window === "undefined") return;
+    const key = "onucore_week_plan_at";
+    const last = Number(window.localStorage.getItem(key) || 0);
+    if (Date.now() - last < 6 * 3600e3) return;
+    window.localStorage.setItem(key, String(Date.now()));
+    onLoad();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  if (!showBig && !plan.text) return null;
+  return (
+    <div className="rise" style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.goldSoft}`, borderRadius: 18, padding: "16px 18px", fontFamily: SF }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div style={{ fontSize: 9.5, letterSpacing: "0.26em", color: C.gold, textTransform: "uppercase" }}>🌅 {es ? "Plan de la semana" : "Week plan"}</div>
+        <button onClick={onLoad} disabled={plan.loading} style={{ background: "transparent", border: `1px solid ${C.borderSoft}`, color: C.mute, fontSize: 11.5, padding: "5px 12px", borderRadius: 999, cursor: "pointer", fontFamily: SF, opacity: plan.loading ? 0.5 : 1 }}>↻ {es ? "Actualizar" : "Refresh"}</button>
+      </div>
+      {plan.loading ? (<div style={{ display: "flex", flexDirection: "column", gap: 8 }}><div className="shimmer" style={{ height: 14, borderRadius: 6, width: "94%" }} /><div className="shimmer" style={{ height: 14, borderRadius: 6, width: "80%" }} /><div className="shimmer" style={{ height: 14, borderRadius: 6, width: "60%" }} /></div>)
+        : plan.text ? (<p style={{ margin: 0, fontSize: 14.5, lineHeight: 1.55, color: C.text, whiteSpace: "pre-wrap" }}>{plan.text}</p>)
+        : (<div style={{ fontSize: 13, color: C.mute }}>{es ? "Toca actualizar para armar tu plan." : "Tap refresh to build your plan."}</div>)}
+    </div>
+  );
+}
+function JournalCard({ lang, entry, onOpen, C, SF }) {
+  const es = lang === "es";
+  const preview = entry && entry.detail ? entry.detail.slice(0, 140) : "";
+  return (
+    <div className="rise" onClick={onOpen} style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 18, padding: "16px 18px", fontFamily: SF, cursor: "pointer" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <div style={{ fontSize: 9.5, letterSpacing: "0.26em", color: C.gold, textTransform: "uppercase" }}>📝 {es ? "Journal de hoy" : "Today's journal"}</div>
+        <span style={{ fontSize: 11.5, color: entry ? C.green : C.mute }}>{entry ? (es ? "✓ Escrito" : "✓ Done") : (es ? "30 seg" : "30 sec")}</span>
+      </div>
+      {preview ? (<p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: C.dim }}>{preview}{entry.detail.length > 140 ? "…" : ""}</p>)
+        : (<div style={{ fontSize: 13.5, color: C.mute }}>{es ? "¿Cómo te fue hoy? Toca para grabar." : "How did today go? Tap to record."}</div>)}
     </div>
   );
 }

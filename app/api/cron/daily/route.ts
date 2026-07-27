@@ -27,7 +27,23 @@ export async function GET(request: Request) {
   const admin = createClient(url, svc, { auth: { persistSession: false } });
 
   const { data: subs } = await admin.from("push_subs").select("*");
-  if (!subs || !subs.length) return Response.json({ ok: true, sent: 0 });
+  if (!subs || !subs.length) return Response.json({ ok: true, sent: 0, reason: "no_subs" });
+
+  // Test mode (?test=1): send a hello to every registered device, no matter what.
+  if (new URL(request.url).searchParams.get("test") === "1") {
+    let tSent = 0;
+    const tErr: string[] = [];
+    const hello = JSON.stringify({ title: "onucore", body: "🎉 ¡Avisos activados! Así te llegarán tus biles, citas, carro e impuestos.", url: "/" });
+    for (const s of subs) {
+      try {
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, hello);
+        tSent++;
+      } catch (e) {
+        tErr.push("t:" + ((e as { statusCode?: number })?.statusCode || "err"));
+      }
+    }
+    return Response.json({ ok: true, sent: tSent, test: true, errors: tErr });
+  }
 
   const byUser = new Map<string, typeof subs>();
   for (const s of subs) {

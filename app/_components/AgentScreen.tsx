@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 // Pantalla del Agente: le das una misión, él ejecuta pasos, reporta.
 // Presets rápidos + input libre. Los pasos se muestran arriba del resumen.
@@ -47,6 +47,39 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
   const [result, setResult] = useState<{ summary: string; steps: Step[] } | null>(null);
   const [copied, setCopied] = useState(false);
   const [deep, setDeep] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const [docPreview, setDocPreview] = useState<string | null>(null);
+  const [docHint, setDocHint] = useState("");
+  const [docAcct, setDocAcct] = useState<"business" | "personal">("business");
+  const [docBusy, setDocBusy] = useState(false);
+  const [docResult, setDocResult] = useState<string | null>(null);
+
+  const onPickFile = (ev: React.ChangeEvent<HTMLInputElement>) => {
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    if (f.size > 8 * 1024 * 1024) { alert(es ? "Máximo 8 MB por foto." : "Max 8 MB per photo."); return; }
+    const r = new FileReader();
+    r.onload = () => { setDocPreview(String(r.result || "")); setDocHint(""); setDocResult(null); };
+    r.readAsDataURL(f);
+  };
+  const analyzeDoc = async () => {
+    if (!docPreview || docBusy) return;
+    setDocBusy(true);
+    setDocResult(null);
+    try {
+      const r = await fetch("/api/agent/analyze-doc", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl: docPreview, hint: docHint, account: docAcct }),
+      });
+      const d = await r.json();
+      if (d.error) setDocResult(`Error: ${d.error}${d.detail ? ` (${d.detail})` : ""}`);
+      else { setDocResult(d.summary || ""); if (onApplied) onApplied(); }
+    } catch { setDocResult(es ? "No se pudo analizar la foto." : "Could not analyze the photo."); }
+    setDocBusy(false);
+  };
+  const clearDoc = () => { setDocPreview(null); setDocHint(""); setDocResult(null); };
   const es = lang === "es";
 
   const run = async (m: string) => {
@@ -76,6 +109,32 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
       <div style={{ fontSize: 22, fontWeight: 600, color: C.text }}>🤖 {es ? "Agente" : "Agent"}</div>
       <div style={{ fontSize: 13.5, color: C.dim, marginTop: 4, lineHeight: 1.5 }}>
         {es ? "Dale una misión y el agente lee tus datos, ejecuta los pasos y te reporta." : "Give it a mission — the agent reads your data, runs the steps and reports back."}
+      </div>
+
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onPickFile} style={{ display: "none" }} />
+      <div style={{ marginTop: 18, background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 16, padding: 12 }}>
+        <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: C.gold, marginBottom: 8, textTransform: "uppercase" }}>📸 {es ? "Foto de documento" : "Document photo"}</div>
+        {docPreview ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={docPreview} alt="" style={{ display: "block", width: "100%", maxHeight: 240, objectFit: "contain", borderRadius: 10, background: C.surface2 }} />
+            <input value={docHint} onChange={(e) => setDocHint(e.target.value)} placeholder={es ? "¿Qué es? (opcional, ej. mi W-2 de 2025)" : "What is it? (optional)"} style={{ width: "100%", background: C.surface2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 10, padding: "10px 12px", fontSize: 13.5, marginTop: 10, fontFamily: SF, outline: "none" }} />
+            <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+              {[["business", "Oprinte"], ["personal", "Personal"]].map(([k, lbl]) => (
+                <button key={k} onClick={() => setDocAcct(k as "business" | "personal")} style={{ flex: 1, padding: "7px", borderRadius: 8, cursor: "pointer", fontFamily: SF, fontSize: 12, fontWeight: docAcct === k ? 600 : 500, background: docAcct === k ? "rgba(229,72,77,.12)" : "transparent", color: docAcct === k ? C.red : C.dim, border: `1px solid ${docAcct === k ? C.red : C.border}` }}>{lbl}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button onClick={clearDoc} disabled={docBusy} style={{ padding: "10px 14px", borderRadius: 10, border: `1px solid ${C.border}`, background: "transparent", color: C.mute, cursor: docBusy ? "default" : "pointer", fontFamily: SF, fontSize: 13, opacity: docBusy ? 0.5 : 1 }}>{es ? "Cancelar" : "Cancel"}</button>
+              <button onClick={analyzeDoc} disabled={docBusy} style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: C.gold, color: "#ffffff", cursor: docBusy ? "default" : "pointer", fontFamily: SF, fontSize: 13.5, fontWeight: 600, opacity: docBusy ? 0.6 : 1 }}>{docBusy ? (es ? "Analizando…" : "Analyzing…") : (es ? "Analizar y organizar" : "Analyze and file")}</button>
+            </div>
+          </>
+        ) : (
+          <button onClick={() => fileRef.current?.click()} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "14px", borderRadius: 12, border: `1px dashed ${C.border}`, background: C.surface2, color: C.gold, cursor: "pointer", fontFamily: SF, fontSize: 14, fontWeight: 600 }}>📷 {es ? "Tomar foto o subir imagen" : "Take photo or upload image"}</button>
+        )}
+        {docResult && (
+          <div style={{ marginTop: 12, padding: "12px 14px", background: C.surface2, border: `1px solid ${C.goldSoft}`, borderRadius: 10, fontSize: 13.5, color: C.text, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{docResult}</div>
+        )}
       </div>
 
       <div style={{ marginTop: 18, background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 16, padding: 12 }}>

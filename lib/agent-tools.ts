@@ -9,6 +9,26 @@ type DB = SupabaseClient<any, any, any>;
 
 const CATS = ["gas", "food", "tech", "travel", "clothing", "software", "ads", "office", "phone", "pro", "insurance", "rent", "home", "education", "personal"];
 
+// Same rules the UI uses (Schedule C line + deductibility % per category).
+const CAT_META: Record<string, { line: string; ded: "full" | "meals50" | "partial" | "none" }> = {
+  gas: { line: "Car & truck (L9)", ded: "full" },
+  food: { line: "Meals (L24b)", ded: "meals50" },
+  tech: { line: "Depreciation / Supplies", ded: "full" },
+  travel: { line: "Travel (L24a)", ded: "full" },
+  clothing: { line: "—", ded: "none" },
+  software: { line: "Other (L27a)", ded: "full" },
+  ads: { line: "Advertising (L8)", ded: "full" },
+  office: { line: "Office / Supplies", ded: "full" },
+  phone: { line: "Utilities / Other", ded: "partial" },
+  pro: { line: "Legal & professional (L17)", ded: "full" },
+  insurance: { line: "Insurance (L15)", ded: "full" },
+  rent: { line: "Rent / lease (L20b)", ded: "full" },
+  home: { line: "Home office (8829)", ded: "full" },
+  education: { line: "Other (L27a)", ded: "full" },
+  personal: { line: "—", ded: "none" },
+};
+const dpct = (ded: string) => (ded === "meals50" ? 0.5 : ded === "partial" ? 0.5 : ded === "none" ? 0 : 1);
+
 export const TOOL_SCHEMAS = [
   {
     name: "list_txns",
@@ -101,6 +121,15 @@ export const TOOL_SCHEMAS = [
     description: "Info del vehículo del usuario y sus servicios/recordatorios.",
     input_schema: { type: "object", properties: {} },
   },
+  {
+    name: "build_tax_package",
+    description: "Arma el paquete COMPLETO para el preparador de impuestos del año fiscal indicado. Devuelve un objeto con: ingresos por cuenta (Empleado W-2 vs Contratista/Oprinte 1099), gastos totales del negocio, DEDUCIBLE TOTAL, deducible desglosado por línea del Schedule C, utilidad neta de Oprinte, formas W-2/1099 con retenciones, match 1099-vs-depósitos por pagador (cuánto llegó, cuánto falta), millaje de negocio del año (millas totales × $0.70/mi = deducción), lista de documentos fiscales guardados en la Bóveda, y datos del vehículo (marca/modelo/placa). Usa esto DIRECTAMENTE en vez de leer todo por separado cuando el usuario pida su reporte fiscal.",
+    input_schema: {
+      type: "object",
+      required: ["year"],
+      properties: { year: { type: "number", description: "Año fiscal (ej. 2025)" } },
+    },
+  },
 ] as const;
 
 // Execute a tool call within the user's RLS scope.
@@ -187,6 +216,88 @@ export async function runTool(db: DB, userId: string, name: string, input: any):
         db.from("car_records").select("id,kind,title,date_iso,due_iso,mileage,due_mileage,cost,note").eq("user_id", userId).order("due_iso", { ascending: true }),
       ]);
       return { vehicle: v?.[0] || null, records: r || [] };
+    }
+    case "build_tax_package": {
+      const year = Number(input?.year);
+      if (!year) return { error: "year required" };
+      const start = `${year}-01-01`;
+      const end = `${year}-12-31`;
+      const [{ data: txns }, { data: forms }, { data: docs }, { data: vehicle }] = await Promise.all([
+        db.from("txns").select("id,kind,amount,cat,account,date_iso,note,ded,miles").eq("user_id", userId).gte("date_iso", start).lte("date_iso", end),
+        db.from("tax_forms").select("id,year,kind,payer,amount,withheld").eq("user_id", userId).eq("year", year),
+        db.from("documents").select("id,name,category,mime,note,created_at").eq("user_id", userId).eq("category", "tax"),
+        db.from("vehicles").select("make,model,year,plate,vin").eq("user_id", userId).limit(1),
+      ]);
+      const tx = txns || [];
+      const bizInc = tx.filter((x) => x.kind === "income" && x.account === "business").reduce((s, x) => s + Number(x.amount || 0), 0);
+      const bizExp = tx.filter((x) => x.kind === "expense" && x.account === "business").reduce((s, x) => s + Number(x.amount || 0), 0);
+      const perInc = tx.filter((x) => x.kind === "income" && x.account !== "business").reduce((s, x) => s + Number(x.amount || 0), 0);
+      const perExp = tx.filter((x) => x.kind === "expense" && x.account !== "business").reduce((s, x) => s + Number(x.amount || 0), 0);
+      // Deductible per transaction (mileage: only when miles are logged).
+      const dedOf = (t: { kind: string; ded?: boolean; amount: number; cat: string; miles?: number | null }) => {
+        if (t.kind !== "expense" || t.ded === false) return 0;
+        if (t.cat === "gas") return t.miles ? Number(t.amount) || 0 : 0;
+        const meta = CAT_META[t.cat] || CAT_META.personal;
+        return (Number(t.amount) || 0) * dpct(meta.ded);
+      };
+      const deductibleTotal = tx.reduce((s, x) => s + dedOf(x), 0);
+      const byLine: Record<string, number> = {};
+      tx.filter((x) => x.kind === "expense").forEach((x) => {
+        const d = dedOf(x); if (d <= 0) return;
+        const line = (CAT_META[x.cat] || CAT_META.personal).line;
+        byLine[line] = (byLine[line] || 0) + d;
+      });
+      const deductibleByScheduleCLine = Object.entries(byLine).sort((a, b) => b[1] - a[1]).map(([line, amount]) => ({ line, amount: Math.round(amount * 100) / 100 }));
+
+      const w2 = (forms || []).filter((f) => f.kind === "W-2");
+      const c1099 = (forms || []).filter((f) => (f.kind || "").startsWith("1099") && f.payer && Number(f.amount) > 0);
+      // 1099 match: sum business-account income lines whose note contains the payer name.
+      const bizIncomeYT = tx.filter((x) => x.kind === "income" && x.account === "business");
+      const match1099 = c1099.map((f) => {
+        const target = Number(f.amount) || 0;
+        const payer = (f.payer || "").toLowerCase();
+        const matched = bizIncomeYT.filter((x) => (x.note || "").toLowerCase().includes(payer)).reduce((s, x) => s + Number(x.amount || 0), 0);
+        return { form: f.kind, payer: f.payer, expected: target, matched: Math.round(matched * 100) / 100, gap: Math.round((target - matched) * 100) / 100 };
+      });
+
+      const businessMiles = tx.reduce((s, x) => s + (Number(x.miles) || 0), 0);
+      const mileageDeduction = Math.round(businessMiles * 0.70 * 100) / 100;
+
+      return {
+        year,
+        business_schedule_c: {
+          income: Math.round(bizInc * 100) / 100,
+          expenses_total: Math.round(bizExp * 100) / 100,
+          deductible_total: Math.round(deductibleTotal * 100) / 100,
+          net_profit: Math.round((bizInc - deductibleTotal) * 100) / 100,
+          deductible_by_schedule_c_line: deductibleByScheduleCLine,
+        },
+        employee_w2: {
+          wages: Math.round(w2.reduce((s, f) => s + Number(f.amount || 0), 0) * 100) / 100,
+          federal_withheld: Math.round(w2.reduce((s, f) => s + Number(f.withheld || 0), 0) * 100) / 100,
+          forms: w2.map((f) => ({ payer: f.payer, wages: Number(f.amount || 0), federal_withheld: Number(f.withheld || 0) })),
+        },
+        forms_1099: c1099.map((f) => ({ kind: f.kind, payer: f.payer, amount: Number(f.amount || 0), federal_withheld: Number(f.withheld || 0) })),
+        deposits_vs_1099: match1099,
+        vehicle_mileage: {
+          business_miles: businessMiles,
+          rate_per_mile: 0.70,
+          deduction: mileageDeduction,
+          vehicle: vehicle?.[0] ? `${vehicle[0].year || ""} ${vehicle[0].make || ""} ${vehicle[0].model || ""}`.trim() : null,
+          plate: vehicle?.[0]?.plate || null,
+        },
+        personal_summary: {
+          income: Math.round(perInc * 100) / 100,
+          expenses: Math.round(perExp * 100) / 100,
+        },
+        documents_stored: (docs || []).map((d) => ({ name: d.name, note: d.note || null, uploaded: (d.created_at || "").slice(0, 10) })),
+        notes: [
+          "Los montos vienen de tus movimientos reales de Chase (Empleado 8050 = W-2, Oprinte 8178 = negocio).",
+          "El deducible de gasolina solo cuenta si registraste millas (método de millaje IRS, 70¢/mi 2026).",
+          "Categorías 'partial' (teléfono/internet) se deducen al 50%. Comidas al 50% (L24b).",
+          "Esto es guía, no asesoría fiscal. Tu preparador debe confirmar.",
+        ],
+      };
     }
     default:
       return { error: `unknown tool: ${name}` };

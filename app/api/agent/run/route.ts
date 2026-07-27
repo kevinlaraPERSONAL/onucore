@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   for (let i = 0; i < MAX_ITER; i++) {
     const resp = await client.messages.create({
       model: "claude-opus-4-8",
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: sys,
       tools: TOOL_SCHEMAS as unknown as Anthropic.Messages.Tool[],
       messages,

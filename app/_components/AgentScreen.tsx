@@ -14,9 +14,13 @@ const TOOL_ES: Record<string, string> = {
   get_balances: "Leer saldos",
   list_tax_forms: "Leer formas fiscales",
   get_car: "Leer info del carro",
+  build_tax_package: "Armar paquete fiscal",
 };
 
+const YEAR_NOW = new Date().getFullYear();
+const TAX_YEAR = new Date().getMonth() <= 3 ? YEAR_NOW - 1 : YEAR_NOW;
 const PRESETS = [
+  { icon: "📊", label: `Paquete completo para mi contador (${TAX_YEAR})`, mission: `Prepara el paquete COMPLETO para mi preparador de impuestos del año fiscal ${TAX_YEAR}. Usa build_tax_package(${TAX_YEAR}). Devuelve un TEXTO CLARO listo para enviarle a mi contador con: 1) resumen ejecutivo (ingresos negocio, deducible total, utilidad neta, W-2 salarios y retención), 2) deducibles por línea del Schedule C, 3) formas W-2 y 1099 con retenciones, 4) match 1099 vs depósitos (qué falta), 5) millaje del carro y su deducción, 6) documentos guardados. Formato lista, sin markdown, en español. Al final: 'Cualquier duda me avisas.'` },
   { icon: "💵", label: "Revisar mis gastos ambiguos", mission: "Revisa mis gastos de los últimos 14 días en la cuenta 'personal' (Empleado). Si alguno claramente parece de negocio (Uber, gasolina, comida con cliente, software), muévelo a cuenta 'business' con la categoría correcta y márcalo deducible. Explica qué moviste." },
   { icon: "🧾", label: "Deducibles perdidos en Oprinte", mission: "Busca gastos de la cuenta 'business' que estén categorizados como 'personal' y no deducibles. Recategorízalos con la categoría correcta del Schedule C (gas, food, tech, travel, software, office, phone, pro, education) y márcalos deducibles. Sé conservador." },
   { icon: "📅", label: "Preparar mis biles del mes", mission: "Revisa mis biles (obligation) del próximo mes. Si alguno no tiene fecha o repeat, arréglalo. Dime cuánto suma en total y en qué días caen." },
@@ -27,6 +31,7 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
   const [mission, setMission] = useState("");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ summary: string; steps: Step[] } | null>(null);
+  const [copied, setCopied] = useState(false);
   const es = lang === "es";
 
   const run = async (m: string) => {
@@ -90,7 +95,17 @@ export default function AgentScreen({ lang = "es", C, SF, onApplied }: { lang?: 
 
       {result && (
         <div style={{ marginTop: 18, background: C.surface, border: `1px solid ${C.goldSoft}`, borderRadius: 16, padding: "14px 16px" }}>
-          <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: C.gold, marginBottom: 10, textTransform: "uppercase" }}>{es ? "Resumen" : "Summary"}</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.2em", color: C.gold, textTransform: "uppercase" }}>{es ? "Resumen" : "Summary"}</div>
+            {result.summary ? (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={async () => { try { await navigator.clipboard.writeText(result.summary); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* noop */ } }} style={{ background: "transparent", border: `1px solid ${C.borderSoft}`, color: copied ? C.green : C.mute, fontSize: 11.5, padding: "5px 12px", borderRadius: 999, cursor: "pointer", fontFamily: SF }}>{copied ? (es ? "Copiado ✓" : "Copied ✓") : (es ? "Copiar" : "Copy")}</button>
+                {typeof navigator !== "undefined" && (navigator as Navigator & { share?: unknown }).share ? (
+                  <button onClick={() => { const nav = navigator as Navigator & { share?: (d: { text: string }) => Promise<void> }; nav.share?.({ text: result.summary }).catch(() => { /* user cancelled */ }); }} style={{ background: "transparent", border: `1px solid ${C.borderSoft}`, color: C.mute, fontSize: 11.5, padding: "5px 12px", borderRadius: 999, cursor: "pointer", fontFamily: SF }}>{es ? "↗ Compartir" : "↗ Share"}</button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
           <p style={{ margin: 0, fontSize: 14.5, color: C.text, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>{result.summary}</p>
           {result.steps.length > 0 && (
             <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.borderSoft}` }}>

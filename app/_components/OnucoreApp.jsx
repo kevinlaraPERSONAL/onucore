@@ -93,7 +93,7 @@ const STR = {
     f_hobbies: "Interests & hobbies", f_people: "Key people", f_goals: "What should onucore help with?", f_wake: "Wake time", f_work: "Work hours", f_briefing: "Briefing time",
     add_ph: "Type and press Enter", person_name: "Name", person_rel: "Relationship",
     conn_sub: "Connect your accounts so onucore works better for you.", connect: "Connect", connected: "Connected", built_in: "Built-in",
-    set_notif: "Daily briefing & proactive alerts", set_quiet: "Quiet hours", set_acct: "Default account for expenses", set_taxpct: "Tax set-aside (% of net)", set_lang: "Language", set_export: "Export my data", set_signout: "Sign out",
+    set_notif: "Daily briefing & proactive alerts", set_quiet: "Quiet hours", set_acct: "Default account for expenses", set_taxpct: "Federal + state rate for the estimate (%)", set_lang: "Language", set_export: "Export my data", set_signout: "Sign out",
     f_nickname: "What you like to be called", f_pronouns: "Pronouns", f_birthday: "Birthday", f_whatsapp: "WhatsApp number", f_city: "City", f_tz: "Time zone",
     f_workertype: "You work as", wt_employee: "Employee", wt_freelance: "Self-employed", wt_owner: "Business owner",
     f_industry: "Industry", f_tax: "Tax structure", tx_sole: "Sole prop", tx_llc: "LLC", tx_scorp: "S-corp", tx_other: "Other",
@@ -130,7 +130,7 @@ const STR = {
     f_hobbies: "Intereses y hobbies", f_people: "Personas clave", f_goals: "¿En qué quieres que onucore te ayude?", f_wake: "Hora de despertar", f_work: "Horario laboral", f_briefing: "Hora del briefing",
     add_ph: "Escribe y presiona Enter", person_name: "Nombre", person_rel: "Relación",
     conn_sub: "Conecta tus cuentas para que onucore funcione mejor para ti.", connect: "Conectar", connected: "Conectado", built_in: "Integrado",
-    set_notif: "Briefing diario y alertas proactivas", set_quiet: "Horas de silencio", set_acct: "Cuenta por defecto para gastos", set_taxpct: "Apartado de impuestos (% del neto)", set_lang: "Idioma", set_export: "Exportar mis datos", set_signout: "Cerrar sesión",
+    set_notif: "Briefing diario y alertas proactivas", set_quiet: "Horas de silencio", set_acct: "Cuenta por defecto para gastos", set_taxpct: "Tasa federal + estatal del estimado (%)", set_lang: "Idioma", set_export: "Exportar mis datos", set_signout: "Cerrar sesión",
     f_nickname: "Cómo te gusta que te llamen", f_pronouns: "Pronombres", f_birthday: "Cumpleaños", f_whatsapp: "Número de WhatsApp", f_city: "Ciudad", f_tz: "Zona horaria",
     f_workertype: "Trabajas como", wt_employee: "Empleado", wt_freelance: "Independiente", wt_owner: "Dueño de negocio",
     f_industry: "Industria / rubro", f_tax: "Estructura fiscal", tx_sole: "Persona física", tx_llc: "LLC", tx_scorp: "S-corp", tx_other: "Otro",
@@ -723,6 +723,8 @@ ${JSON.stringify(snapshot)}`;
       out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: `🚗 ${nm} ${when}` });
     });
     if (vehicle && vehicle.insurance_expiry) { const du = daysUntil(vehicle.insurance_expiry); if (du != null && du <= 30) out.push({ kind: "car", color: du <= 7 ? C.red : C.gold, text: es ? `🚗 Seguro del carro ${du < 0 ? "venció" : du === 0 ? "vence hoy" : `vence en ${du} día(s)`}` : `🚗 Car insurance ${du < 0 ? "expired" : du === 0 ? "expires today" : `expires in ${du} day(s)`}` }); }
+    // IRS quarterly estimated-tax dates coming up (within 7 days).
+    { const yq = new Date().getFullYear(); const qd = [`${yq}-04-15`, `${yq}-06-15`, `${yq}-09-15`, `${yq + 1}-01-15`].find((d) => { const du = daysUntil(d); return du != null && du >= 0 && du <= 7; }); if (qd) out.push({ kind: "tax", color: C.red, text: es ? `💵 Pago trimestral de impuestos: ${fmtDate(qd, lang)}` : `💵 Quarterly estimated tax due ${fmtDate(qd, lang)}` }); }
     // Subscriptions renewing in the next 3 days.
     subs.forEach((s) => { if (!s.dateISO) return; const du = daysUntil(nextRenewal(s.dateISO, s.dateLabel)); if (du != null && du >= 0 && du <= 3) out.push({ kind: "sub", color: C.gold, text: (es ? `${s.title} se renueva ${du === 0 ? "hoy" : "en " + du + " día(s)"}` : `${s.title} renews ${du === 0 ? "today" : "in " + du + " day(s)"}`) + (s.amount ? ` · ${money(Number(s.amount) || 0, loc)}` : "") }); });
     const m = new Date(); const inMonth = (iso) => { const dt = new Date(iso + "T00:00:00"); return dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth(); };
@@ -1282,14 +1284,27 @@ function Money({ t, lang, loc, txns, obligations, subs, period, setPeriod, fseg,
     {(() => {
       const yr = new Date().getFullYear();
       const yT = txns.filter((x) => new Date(x.dateISO + "T00:00:00").getFullYear() === yr);
-      const yInc = yT.filter((x) => x.kind === "income").reduce((s, x) => s + x.amount, 0);
+      // Only contractor/business income owes estimated taxes; the W-2 paycheck
+      // already withholds, so it stays out of this card.
+      const bizInc = yT.filter((x) => x.kind === "income" && x.account === "business").reduce((s, x) => s + x.amount, 0);
       const yDed = yT.reduce((s, x) => s + dedAmount(x), 0);
-      const net = Math.max(0, yInc - yDed); const setAside = net * ((setAsidePct || 30) / 100);
-      if (yInc <= 0) return null;
+      const net = Math.max(0, bizInc - yDed);
+      if (net <= 0) return null;
+      const seTax = net * 0.9235 * 0.153; // self-employment (Social Security + Medicare)
+      const fedPct = setAsidePct || 30;
+      const fedTax = Math.max(0, net - seTax / 2) * (fedPct / 100); // half of SE tax deducts first
+      const setAside = seTax + fedTax;
+      const es2 = lang === "es";
+      const qDates = [`${yr}-04-15`, `${yr}-06-15`, `${yr}-09-15`, `${yr + 1}-01-15`];
+      const nextQ = qDates.find((d) => { const du = daysUntil(d); return du != null && du >= 0; });
       return (<div className="rise" style={{ marginTop: 12, background: C.surface, border: `1px solid ${C.borderSoft}`, borderRadius: 18, padding: "16px 18px" }}>
         <div style={{ fontSize: 10.5, letterSpacing: "0.18em", textTransform: "uppercase", color: C.dim, marginBottom: 12 }}>{t.tax_label} · {yr}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}><div><div style={{ fontSize: 12, color: C.mute }}>{t.tax_setaside}</div><div className="num" style={{ fontSize: 26, fontWeight: 300, color: C.gold, marginTop: 3 }}>{money(setAside, loc)}</div></div><div style={{ textAlign: "right" }}><div style={{ fontSize: 12, color: C.mute }}>{t.tax_quarterly}</div><div className="num" style={{ fontSize: 18, color: C.text, marginTop: 3 }}>{money(setAside / 4, loc)}</div></div></div>
-        <div style={{ fontSize: 11.5, color: C.dim, marginTop: 10 }}>{t.tax_net}: <span className="num">{money(net, loc)}</span></div>
+        <div style={{ fontSize: 11.5, color: C.dim, marginTop: 10, lineHeight: 1.7 }}>
+          {es2 ? "Utilidad de negocio (Oprinte)" : "Business profit (Oprinte)"}: <span className="num">{money(net, loc)}</span><br />
+          Self-employment (15.3%): <span className="num">{money(seTax, loc)}</span> · {es2 ? "Federal + estatal" : "Federal + state"} (~{fedPct}%): <span className="num">{money(fedTax, loc)}</span>
+          {nextQ ? (<><br />{es2 ? "Próximo pago trimestral" : "Next quarterly payment"}: <span style={{ color: C.gold }}>{fmtDate(nextQ, lang)}</span></>) : null}
+        </div>
         <div style={{ fontSize: 11, color: C.mute, marginTop: 8, lineHeight: 1.5 }}>ⓘ {t.tax_disc}</div>
       </div>);
     })()}

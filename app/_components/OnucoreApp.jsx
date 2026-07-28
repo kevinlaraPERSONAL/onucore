@@ -1771,12 +1771,35 @@ function Car({ t, lang, loc, vehicle, records, onEditVehicle, onAddRecord, onEdi
         </div>
         <button onClick={onEditVehicle} style={{ background: "transparent", border: `1px solid ${C.border}`, color: C.dim, borderRadius: 9, padding: "6px 12px", fontSize: 12.5, cursor: "pointer", fontFamily: SF, flexShrink: 0 }}>{es ? "Editar" : "Edit"}</button>
       </div>
-      {(vehicle.mileage != null || vehicle.insurance_company || vehicle.insurance_expiry) && (
-        <div style={{ display: "flex", gap: 24, marginTop: 15, flexWrap: "wrap" }}>
-          {vehicle.mileage != null ? <div><div style={{ fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: C.mute }}>{es ? "Millaje" : "Mileage"}</div><div className="num" style={{ fontSize: 17, fontWeight: 600, marginTop: 3 }}>{Number(vehicle.mileage).toLocaleString()} mi</div></div> : null}
-          {vehicle.insurance_company ? <div style={{ minWidth: 0 }}><div style={{ fontSize: 10, letterSpacing: ".08em", textTransform: "uppercase", color: C.mute }}>{es ? "Seguro" : "Insurance"}</div><div style={{ fontSize: 15, fontWeight: 600, marginTop: 3 }}>{vehicle.insurance_company}</div></div> : null}
-        </div>
-      )}
+      {/* Ficha completa a la vista: todo lo del carro sin tener que entrar a Editar. */}
+      {(() => {
+        const insDays = vehicle.insurance_expiry ? daysUntil(vehicle.insurance_expiry) : null;
+        const insColor = insDays == null ? C.text : insDays < 0 ? C.bad : insDays <= 30 ? C.warn : C.text;
+        const lastOil = records.filter((r) => r.kind === "oil" && r.date_iso).sort((a, b) => b.date_iso.localeCompare(a.date_iso))[0];
+        const nextDue = records.filter((r) => r.due_iso).sort((a, b) => a.due_iso.localeCompare(b.due_iso))[0];
+        const nextDays = nextDue ? daysUntil(nextDue.due_iso) : null;
+        const fields = [
+          vehicle.mileage != null ? { k: es ? "Millaje" : "Mileage", v: `${Number(vehicle.mileage).toLocaleString()} mi` } : null,
+          vehicle.color ? { k: es ? "Color" : "Color", v: vehicle.color } : null,
+          vehicle.insurance_company ? { k: es ? "Aseguradora" : "Insurer", v: vehicle.insurance_company } : null,
+          vehicle.insurance_policy ? { k: es ? "Póliza" : "Policy", v: vehicle.insurance_policy } : null,
+          vehicle.insurance_expiry ? { k: es ? "Vence seguro" : "Ins. expires", v: fmtDate(vehicle.insurance_expiry, lang), color: insColor } : null,
+          lastOil ? { k: es ? "Último aceite" : "Last oil", v: fmtDate(lastOil.date_iso, lang) + (lastOil.mileage ? ` · ${Number(lastOil.mileage).toLocaleString()} mi` : "") } : null,
+          nextDue ? { k: es ? "Próximo servicio" : "Next service", v: (nextDue.title || KIND[nextDue.kind] || (es ? "Servicio" : "Service")) + " · " + fmtDate(nextDue.due_iso, lang), color: nextDays == null ? C.text : nextDays < 0 ? C.bad : nextDays <= 30 ? C.warn : C.text } : null,
+          vehicle.vin ? { k: "VIN", v: vehicle.vin, mono: true } : null,
+        ].filter(Boolean);
+        if (!fields.length) return null;
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
+            {fields.map((f, i) => (
+              <div key={i} style={{ minWidth: 0, gridColumn: f.mono ? "1 / -1" : "auto" }}>
+                <div style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: C.mute }}>{f.k}</div>
+                <div className={f.mono ? "" : "num"} style={{ fontSize: f.mono ? 12 : 14.5, fontWeight: f.mono ? 400 : 600, marginTop: 3, color: f.color || C.text, wordBreak: f.mono ? "break-all" : "normal", fontFamily: f.mono ? "ui-monospace, monospace" : SF }}>{f.v}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
     </div>
 
     {upcoming.length > 0 && (<>

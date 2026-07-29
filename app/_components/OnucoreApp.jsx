@@ -1778,23 +1778,25 @@ function Car({ t, lang, loc, vehicle, records, onEditVehicle, onAddRecord, onEdi
         const lastOil = records.filter((r) => r.kind === "oil" && r.date_iso).sort((a, b) => b.date_iso.localeCompare(a.date_iso))[0];
         const nextDue = records.filter((r) => r.due_iso).sort((a, b) => a.due_iso.localeCompare(b.due_iso))[0];
         const nextDays = nextDue ? daysUntil(nextDue.due_iso) : null;
+        // Se muestran TODOS los campos, también los vacíos, para ver de un
+        // vistazo qué falta sin tener que entrar a Editar.
+        const dash = es ? "Falta" : "Missing";
         const fields = [
-          vehicle.mileage != null ? { k: es ? "Millaje" : "Mileage", v: `${Number(vehicle.mileage).toLocaleString()} mi` } : null,
-          vehicle.color ? { k: es ? "Color" : "Color", v: vehicle.color } : null,
-          vehicle.insurance_company ? { k: es ? "Aseguradora" : "Insurer", v: vehicle.insurance_company } : null,
-          vehicle.insurance_policy ? { k: es ? "Póliza" : "Policy", v: vehicle.insurance_policy } : null,
-          vehicle.insurance_expiry ? { k: es ? "Vence seguro" : "Ins. expires", v: fmtDate(vehicle.insurance_expiry, lang), color: insColor } : null,
-          lastOil ? { k: es ? "Último aceite" : "Last oil", v: fmtDate(lastOil.date_iso, lang) + (lastOil.mileage ? ` · ${Number(lastOil.mileage).toLocaleString()} mi` : "") } : null,
-          nextDue ? { k: es ? "Próximo servicio" : "Next service", v: (nextDue.title || KIND[nextDue.kind] || (es ? "Servicio" : "Service")) + " · " + fmtDate(nextDue.due_iso, lang), color: nextDays == null ? C.text : nextDays < 0 ? C.bad : nextDays <= 30 ? C.warn : C.text } : null,
-          vehicle.vin ? { k: "VIN", v: vehicle.vin, mono: true } : null,
-        ].filter(Boolean);
-        if (!fields.length) return null;
+          { k: es ? "Millaje" : "Mileage", v: vehicle.mileage != null ? `${Number(vehicle.mileage).toLocaleString()} mi` : null },
+          { k: es ? "Color" : "Color", v: vehicle.color || null },
+          { k: es ? "Aseguradora" : "Insurer", v: vehicle.insurance_company || null },
+          { k: es ? "Póliza" : "Policy", v: vehicle.insurance_policy || null },
+          { k: es ? "Vence seguro" : "Ins. expires", v: vehicle.insurance_expiry ? fmtDate(vehicle.insurance_expiry, lang) : null, color: insColor },
+          { k: es ? "Último aceite" : "Last oil", v: lastOil ? fmtDate(lastOil.date_iso, lang) + (lastOil.mileage ? ` · ${Number(lastOil.mileage).toLocaleString()} mi` : "") : null },
+          { k: es ? "Próximo servicio" : "Next service", v: nextDue ? (nextDue.title || KIND[nextDue.kind] || (es ? "Servicio" : "Service")) + " · " + fmtDate(nextDue.due_iso, lang) : null, color: nextDays == null ? C.text : nextDays < 0 ? C.bad : nextDays <= 30 ? C.warn : C.text },
+          { k: "VIN", v: vehicle.vin || null, mono: true },
+        ];
         return (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.borderSoft}` }}>
             {fields.map((f, i) => (
-              <div key={i} style={{ minWidth: 0, gridColumn: f.mono ? "1 / -1" : "auto" }}>
+              <div key={i} onClick={f.v ? undefined : onEditVehicle} style={{ minWidth: 0, gridColumn: f.mono ? "1 / -1" : "auto", cursor: f.v ? "default" : "pointer" }}>
                 <div style={{ fontSize: 9.5, letterSpacing: ".1em", textTransform: "uppercase", color: C.mute }}>{f.k}</div>
-                <div className={f.mono ? "" : "num"} style={{ fontSize: f.mono ? 12 : 14.5, fontWeight: f.mono ? 400 : 600, marginTop: 3, color: f.color || C.text, wordBreak: f.mono ? "break-all" : "normal", fontFamily: f.mono ? "ui-monospace, monospace" : SF }}>{f.v}</div>
+                <div className={f.mono && f.v ? "" : "num"} style={{ fontSize: f.mono && f.v ? 12 : 14.5, fontWeight: f.v ? (f.mono ? 400 : 600) : 400, marginTop: 3, color: f.v ? (f.color || C.text) : C.mute, wordBreak: f.mono ? "break-all" : "normal", fontFamily: f.mono && f.v ? "ui-monospace, monospace" : SF, opacity: f.v ? 1 : 0.65 }}>{f.v || `＋ ${dash}`}</div>
               </div>
             ))}
           </div>
